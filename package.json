@@ -1,6 +1,6 @@
 {
   "name": "weixin2html",
-  "version": "1.0.0",
+  "version": "1.0.9",
   "description": "",
   "main": "index.js",
   "scripts": {
@@ -8,13 +8,13 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/onekit-js/weixin2h5.git"
+    "url": "git+https://github.com/onekit-js/weixin2html.git"
   },
   "author": "",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/onekit-js/weixin2h5/issues"
+    "url": "https://github.com/onekit-js/weixin2html/issues"
   },
   
-  "homepage": "https://github.com/onekit-js/weixin2h5#readme"
+  "homepage": "https://github.com/onekit-js/weixin2html#readme"
 }
