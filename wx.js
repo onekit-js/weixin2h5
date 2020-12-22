@@ -8,7 +8,8 @@ import UpdateManager from "./api/UpdateManager"
 import TheKit from './js/TheKit'
 import DownloadTask from './api/DownloadTask'
 import UploadTask from './api/UploadTask'
-import { PROMISE, TASK } from 'oneutil'
+import PROMISE from 'oneutil/PROMISE'
+import TASK from 'oneutil/TASK'
 import axios from 'axios'
 
 import 'jquery-confirm'
