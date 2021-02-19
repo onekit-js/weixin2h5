@@ -27,6 +27,7 @@ import 'jquery-confirm'
 import 'jquery-confirm/css/jquery-confirm.css'
 import './js/PrevewImage'
 import config from './config'
+import AudioContext from './api/AudioContext'
 
 export default class WX {
   constructor(fn_global) {
@@ -1332,7 +1333,18 @@ export default class WX {
       this.fn_global().innerAudioManager = innerAudioManager
       return innerAudioManager
     }
+  }
 
+  createAudioContext(id) {
+    const audioContext = document.getElementById(id)
+    audioContext.crossOrigin = 'anonymous'
+    if (this.fn_global().audioContext) {
+      return this.fn_global().audioContext
+    } else {
+      const audioManager = new AudioContext(audioContext)
+      this.fn_global().audioManager = audioManager
+      return audioManager
+    }
   }
 
   //////////////////// 视频  ///////////////////////
@@ -1983,22 +1995,8 @@ export default class WX {
  /////////////////////////////////////////////////
   setInnerAudioOption() {}
   getAvailableAudioSources() {}
-  // AudioContext
-  createAudioContext(id) {
-    const ac = document.getElementById(id)
 
-    ac.setSrc = function (src) {
-      ac.src = src
-    }
-
-    ac.seek = function (position) {
-      ac.currentTime = position
-    }
-
-    // console.warn(String.format(ONEKIT_GLOBAL_NOT_MAINTAIN, '<audio/>', 'createInnerAudioContext'))
-
-    return ac
-  }
+  
 
   getBackgroundAudioPlayerState(wx_object) {
     const wx_success = wx_object.success
