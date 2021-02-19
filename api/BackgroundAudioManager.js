@@ -78,7 +78,7 @@ export default class BackgroundAudioManager {
   }
 
   offTimeUpdate() {
-    console.warn('In fact, toutiao is not support offTimeUpdate')
+    console.warn('In fact, weixin is not support offTimeUpdate')
   }
 
   onError(callback) {
