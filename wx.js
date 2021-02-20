@@ -690,7 +690,6 @@ export default class WX {
     }, wx_success, wx_fail, wx_complete)
   }
 
-
   clearStorageSync() {
     localStorage.clear()
   }
@@ -746,7 +745,18 @@ export default class WX {
     }
   }
 
-  createMapContext() {}
+  setBackgroundFetchToken() {
+    console.warn('html5 is not support setBackgroundFetchToken')
+  }
+  onBackgroundFetchData() {
+    console.warn('html5 is not support onBackgroundFetchData')
+  }
+  getBackgroundFetchToken() {
+    console.warn('html5 is not support getBackgroundFetchToken')
+  }
+  getBackgroundFetchData() {
+    console.warn('html5 is not support getBackgroundFetchData')
+  }
 
   saveImageToPhotosAlbum(wx_object) {
     const wx_filePath = wx_object.filePath
@@ -1409,11 +1419,6 @@ export default class WX {
     return new CameraContext()
   }
 
-  /////////////////// 地图 /////////////////////////
-
-  createMapContext(id, component) {
-    return new MapContext(id, component)
-  }
 
   ///////////////////// 文件  //////////////////////
 
@@ -3311,10 +3316,7 @@ export default class WX {
   pauseVoice() {}
   stopVoice() {}
 
-  setBackgroundFetchToken() {}
-  onBackgroundFetchData() {}
-  getBackgroundFetchToken() {}
-  getBackgroundFetchData() {}
+
 
   onKeyboardHeightChange() {}
   offKeyboardHeightChange() {}
