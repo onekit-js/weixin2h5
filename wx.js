@@ -24,6 +24,8 @@ import CameraContext from './api/CameraContext'
 import LivePlayerContext from './api/LivePusherContext'
 import FileSystemManager from './api/FileSystemManager'
 import MediaContainer from './api/MediaContainer'
+import MediaRecorder from './api/MediaRecorder'
+import VideoDecoder from './api/VideoDecoder'
 import 'jquery-confirm'
 import 'jquery-confirm/css/jquery-confirm.css'
 import './js/PrevewImage'
@@ -1501,7 +1503,14 @@ export default class WX {
   exitVoIPChat() {}
 
   ////////////////////  画面录制器 //////////////////
-  createMediaRecorder() {}
+  createMediaRecorder() {
+    return new MediaRecorder()
+  }
+
+  ///////////////////// 视频解析 ////////////////////
+  createVideoDecoder() {
+    return new VideoDecoder()
+  }
   ///////////////////// 文件  //////////////////////
 
   saveFile(options) {
@@ -1668,42 +1677,6 @@ export default class WX {
   //   }, success, fail, complete)
   // }
 
-  getLocation(options) {
-    // const type = options.type
-    const success = options.success
-    const fail = options.fail
-    const complete = options.complete
-
-    this._mapinit()
-    PROMISE(SUCCESS => {
-      
-    window.addEventListener("load", () => {
-      const mapObj = new AMap.Map('iCenter')
-      mapObj.plugin('AMap.Geolocation', () => {
-      const geolocation  = new AMap.Geolocation()
-      mapObj.addControl(geolocation)
-      geolocation.getCurrentPosition()
-      AMap.event.addListener(geolocation, 'complete', onComplete => {
-        const resu = {
-          accuracy: onComplete.accuracy,
-          altitude: onComplete.accuracy,
-          city: onComplete.addressComponent.city,
-          errMsg: 'getLocation: ok',
-          horizonralAccuracy: onComplete.accuracy,
-          latitude: onComplete.position.lat,
-          longitude: onComplete.position.lng,
-          speed: onComplete.status,
-          verticalAccuracy: onComplete.accuracy
-        }
-        SUCCESS(resu)
-        
-      })
-        AMap.event.addListener(geolocation, 'error', onError)
-        })
-      }
-    ) 
-    },success, fail, complete)
-  }
 
  //////////////////// 设备 ////////////////////////
  getNetworkType(options) {
@@ -2079,6 +2052,111 @@ export default class WX {
     performance.onresourcetimingbufferful = _sourceful
   }
 
+  ////////////////// 位置  ////////////////////
+  stopLocationUpdate() {}
+
+  startLocationUpdateBackground() {}
+
+  startLocationUpdate() {}
+
+  openLocation(wx_object) {
+    const latitude = wx_object.latitude // （必填） 纬度，浮点数，范围为90 ~ -90
+    const longitude = wx_object.longitude // （必填）经度，浮点数，范围为180 ~ -180
+    // TODO: 5~18 转换为 1~28
+    const scale = wx_object.latitude || 28 // 地图缩放级别,整形值,范围从1~28。默认为最大【小程序：缩放比例，范围5~18】
+    const name = wx_object.name // 位置名
+    const address = wx_object.address // 地址详情说明
+    const infoUrl = wx_object.infoUrl // * 在查看位置界面底部显示的超链接,可点击跳转
+    const wx_success = wx_object.success
+    const wx_fail = wx_object.fail
+    const wx_complete = wx_object.complete
+
+    try {
+      let errorInfo = ''
+      let hasError = false
+      const onekit_global = {}
+      if (typeof latitude !== 'number') {
+        errorInfo =
+          String.format(onekit_global.error_head, 'openLocation') +
+          String.format(onekit_global.error_body, 'latitude', 'Number', typeof longitude)
+        hasError = true
+      } else if (!longitude) {
+        // TODO: 无法进入这里判断
+        errorInfo += String.format(onekit_global.error_body, 'longitude', 'Number')
+        hasError = true
+      }
+      if (hasError) {
+        throw new Error(errorInfo)
+      }
+    } catch (error) {
+      console.error(error.message)
+    }
+
+    // INFO: success 会返回 res , fail 和 complete 不会返回
+    this.openLocation({
+      latitude: latitude,
+      longitude: longitude,
+      name: name,
+      address: address,
+      scale: scale,
+      infoUrl: infoUrl,
+      success: function (res) {
+        if (wx_success) {
+          wx_success(res)
+        }
+      },
+      fail: function () {
+        wx_fail()
+      },
+      complete: function () {
+        if (wx_complete) {
+          wx_complete()
+        }
+      },
+    })
+  }
+
+  onLocationChange() {}
+
+  offLocationChange() {}
+
+  getLocation(options) {
+    // const type = options.type
+    const success = options.success
+    const fail = options.fail
+    const complete = options.complete
+
+    this._mapinit()
+    PROMISE(SUCCESS => {
+      
+    window.addEventListener("load", () => {
+      const mapObj = new AMap.Map('iCenter')
+      mapObj.plugin('AMap.Geolocation', () => {
+      const geolocation  = new AMap.Geolocation()
+      mapObj.addControl(geolocation)
+      geolocation.getCurrentPosition()
+      AMap.event.addListener(geolocation, 'complete', onComplete => {
+        const resu = {
+          accuracy: onComplete.accuracy,
+          altitude: onComplete.accuracy,
+          city: onComplete.addressComponent.city,
+          errMsg: 'getLocation: ok',
+          horizonralAccuracy: onComplete.accuracy,
+          latitude: onComplete.position.lat,
+          longitude: onComplete.position.lng,
+          speed: onComplete.status,
+          verticalAccuracy: onComplete.accuracy
+        }
+        SUCCESS(resu)
+        
+      })
+        AMap.event.addListener(geolocation, 'error', onError)
+        })
+      }
+    ) 
+    },success, fail, complete)
+  }
+
  /////////////////////////////////////////////////
   setInnerAudioOption() {}
   getAvailableAudioSources() {}
@@ -2373,63 +2451,6 @@ export default class WX {
   // CameraFrameListener
 
   // EditorContext
-
-  openLocation(wx_object) {
-    const latitude = wx_object.latitude // （必填） 纬度，浮点数，范围为90 ~ -90
-    const longitude = wx_object.longitude // （必填）经度，浮点数，范围为180 ~ -180
-    // TODO: 5~18 转换为 1~28
-    const scale = wx_object.latitude || 28 // 地图缩放级别,整形值,范围从1~28。默认为最大【小程序：缩放比例，范围5~18】
-    const name = wx_object.name // 位置名
-    const address = wx_object.address // 地址详情说明
-    const infoUrl = wx_object.infoUrl // * 在查看位置界面底部显示的超链接,可点击跳转
-    const wx_success = wx_object.success
-    const wx_fail = wx_object.fail
-    const wx_complete = wx_object.complete
-
-    try {
-      let errorInfo = ''
-      let hasError = false
-      const onekit_global = {}
-      if (typeof latitude !== 'number') {
-        errorInfo =
-          String.format(onekit_global.error_head, 'openLocation') +
-          String.format(onekit_global.error_body, 'latitude', 'Number', typeof longitude)
-        hasError = true
-      } else if (!longitude) {
-        // TODO: 无法进入这里判断
-        errorInfo += String.format(onekit_global.error_body, 'longitude', 'Number')
-        hasError = true
-      }
-      if (hasError) {
-        throw new Error(errorInfo)
-      }
-    } catch (error) {
-      console.error(error.message)
-    }
-
-    // INFO: success 会返回 res , fail 和 complete 不会返回
-    this.openLocation({
-      latitude: latitude,
-      longitude: longitude,
-      name: name,
-      address: address,
-      scale: scale,
-      infoUrl: infoUrl,
-      success: function (res) {
-        if (wx_success) {
-          wx_success(res)
-        }
-      },
-      fail: function () {
-        wx_fail()
-      },
-      complete: function () {
-        if (wx_complete) {
-          wx_complete()
-        }
-      },
-    })
-  }
 
   // share
 
@@ -3348,10 +3369,21 @@ export default class WX {
   UserInfo() {}
   getUserInfo() {}
 
+  ///////////////// 转发 ////////////////////////////
   updateShareMenu() {}
+
   showShareMenu() {}
+
+  showShareImageMenu() {}
+
+  onCopyUrl() {}
+
+  offCopyUrl() {}
+
   hideShareMenu() {}
+
   getShareInfo() {}
+  
   authPrivateMessage() {}
 
 
