@@ -24,13 +24,14 @@ import CameraContext from './api/CameraContext'
 import LivePlayerContext from './api/LivePusherContext'
 import FileSystemManager from './api/FileSystemManager'
 import MediaContainer from './api/MediaContainer'
-import MediaRecorder from './api/MediaRecorder'
+import _MediaRecorder from './api/MediaRecorder'
 import VideoDecoder from './api/VideoDecoder'
 import 'jquery-confirm'
 import 'jquery-confirm/css/jquery-confirm.css'
 import './js/PrevewImage'
 import config from './config'
 import AudioContext from './api/AudioContext'
+import MediaRecorder from './api/MediaRecorder'
 
 export default class WX {
   constructor(fn_global) {
@@ -47,7 +48,7 @@ export default class WX {
 
   arrayBufferToBase64(arrayBuffer) {
     return STRING.arrayBufferToBase64(arrayBuffer)
-  } 
+  }
   /** 更新 */
   updateWeChatApp(wx_object) {
     const wx_success = wx_object.success || ''
@@ -1228,7 +1229,7 @@ export default class WX {
                 }
 
                 TASK(fileFactory, (file, itemCallback) => {
-                  if (COMPRESSPED.includes( 'original')) {
+                  if (COMPRESSPED.includes('original')) {
                     const reader = new FileReader()
                     reader.onload = function (e) {
                       let blob
@@ -1491,7 +1492,7 @@ export default class WX {
   onVoIPChatSpeakersChanged() {}
 
   onVoIPChatInterrupted() {}
-  
+
   offVoIPVideoMembersChanged() {}
 
   offVoIPChatMembersChanged() {}
@@ -1503,8 +1504,34 @@ export default class WX {
   exitVoIPChat() {}
 
   ////////////////////  画面录制器 //////////////////
-  createMediaRecorder() {
-    return new MediaRecorder()
+  createMediaRecorder(canvas, options) {
+    canvas = null
+    const { duration, videoBitsPerSecond } = options
+
+    if (navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia) {
+      navigator.mediaDevices.getDisplayMedia({
+        video: true,
+        audio: true
+      }).then(strema => {
+        let buf = []
+        const options = {
+          mimeType: 'video/webm;codecs=vp8',
+          videoBitsPerSecond
+        }
+        if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+          console.error('不支持的视频格式');
+          return;
+        }
+
+        const mediaRecorder = new MediaRecorder(strema, options)
+        new _MediaRecorder(mediaRecorder, duration, buf)
+        
+      }).catch(err => {
+        console.error(err)
+      })
+    }else {
+      console.error('your browser is not support meida-recoder')
+    }
   }
 
   ///////////////////// 视频解析 ////////////////////
@@ -1667,7 +1694,7 @@ export default class WX {
   //           address
   //         }
   //         SUCCESS(resu)
-          
+
   //       // })
   //     })
   //     const res = {
@@ -1678,27 +1705,31 @@ export default class WX {
   // }
 
 
- //////////////////// 设备 ////////////////////////
- getNetworkType(options) {
-   const {success, fail, complete} = options
-   options = null
+  //////////////////// 设备 ////////////////////////
+  getNetworkType(options) {
+    const {
+      success,
+      fail,
+      complete
+    } = options
+    options = null
 
-   PROMISE(SUCCESS => {
-    const connectionInfo = navigator.connection
-    const networkType = connectionInfo.effectiveType
-     const res = {
-      networkType
-     }
-     SUCCESS(res)
-   },success, fail, complete)
- }
+    PROMISE(SUCCESS => {
+      const connectionInfo = navigator.connection
+      const networkType = connectionInfo.effectiveType
+      const res = {
+        networkType
+      }
+      SUCCESS(res)
+    }, success, fail, complete)
+  }
 
- onNetworkStatusChange(callback) {
+  onNetworkStatusChange(callback) {
     const connection = navigator.connection
     const connectionInfo = {}
     connectionInfo.isOnline = true
     connectionInfo.networkType = connection.type || 'unknown'
-    connection.addEventListener('change',  () => {
+    connection.addEventListener('change', () => {
       if (connection.type === 'cellular') {
         if (connection.rtt < 270) {
           connectionInfo.networkType = '4g'
@@ -1716,68 +1747,72 @@ export default class WX {
       }
       callback(connectionInfo)
     })
- }
-
- getWifiList(options) {
-   options = null
-   console.warn('h5 is not support getwifiList')
- }
-
- onGetWifiList(callback) {
-   const errMsg = 'h5 is not support onGetWifiList'
-   callback(errMsg)
- }
-
- offGetWifiList(callback) {
-  const errMsg = 'h5 is not support offGetWifiList'
-  callback(errMsg)
- }
-
- getSystemInfoSync() {
-  try {
-    const device_type = navigator.userAgent
-    const md = new MobileDetect(device_type)
-    const os = md.os()
-    let model
-    let system
-    let platform
-    switch (os) {
-      case 'iOS':
-        model = md.mobile()
-        system = 'ios' + md.version('iPhone'),
-          platform = 'ios'
-        break
-      case 'AndroidOS':
-        system = 'Android ' + md.version('Android')
-        model = md.mobile()
-        platform = 'android'
-        break
-    }
-    return {
-      brand: 'www.onekit.cn',
-      model: model,
-      pixelRatio: window.devicePixelRatio,
-      screenWidth: window.screen.width,
-      screenHeight: window.screen.height,
-      windowWidth: window.innerWidth,
-      windowHeight: window.innerHeight,
-      statusBarHeight: 20,
-      language: window.navigator.language,
-      version: '7.0',
-      system: system,
-      platform: platform,
-      fontSizeSetting: 20,
-      SDKVersion: '2.12.1',
-      benchmarkLevel: 1,
-      theme: 'light',
-    }
-  } catch (e) {
-    throw new Error('getSystemInfoSync:fail')
   }
- }
+
+  getWifiList(options) {
+    options = null
+    console.warn('h5 is not support getwifiList')
+  }
+
+  onGetWifiList(callback) {
+    const errMsg = 'h5 is not support onGetWifiList'
+    callback(errMsg)
+  }
+
+  offGetWifiList(callback) {
+    const errMsg = 'h5 is not support offGetWifiList'
+    callback(errMsg)
+  }
+
+  getSystemInfoSync() {
+    try {
+      const device_type = navigator.userAgent
+      const md = new MobileDetect(device_type)
+      const os = md.os()
+      let model
+      let system
+      let platform
+      switch (os) {
+        case 'iOS':
+          model = md.mobile()
+          system = 'ios' + md.version('iPhone'),
+            platform = 'ios'
+          break
+        case 'AndroidOS':
+          system = 'Android ' + md.version('Android')
+          model = md.mobile()
+          platform = 'android'
+          break
+      }
+      return {
+        brand: 'www.onekit.cn',
+        model: model,
+        pixelRatio: window.devicePixelRatio,
+        screenWidth: window.screen.width,
+        screenHeight: window.screen.height,
+        windowWidth: window.innerWidth,
+        windowHeight: window.innerHeight,
+        statusBarHeight: 20,
+        language: window.navigator.language,
+        version: '7.0',
+        system: system,
+        platform: platform,
+        fontSizeSetting: 20,
+        SDKVersion: '2.12.1',
+        benchmarkLevel: 1,
+        theme: 'light',
+      }
+    } catch (e) {
+      throw new Error('getSystemInfoSync:fail')
+    }
+  }
 
   getSystemInfo(options) {
-    const {success, fail, complete} = options
+    const {
+      success,
+      fail,
+      complete
+    } = options
     options = null
     // ///////////////////////////
     PROMISE(SUCCESS => {
@@ -1787,7 +1822,7 @@ export default class WX {
   }
 
   getConnectedWifi(options) {
-    console.warn('h5 is not support getConnectedWifi')    
+    console.warn('h5 is not support getConnectedWifi')
   }
 
   onAccelerometerChange(callback) {
@@ -1805,21 +1840,29 @@ export default class WX {
   }
 
   startAccelerometer(options) {
-    const {success, fail, complete} = options
+    const {
+      success,
+      fail,
+      complete
+    } = options
     options = null
     PROMISE(SUCCESS => {
-      if(!window.DeviceMotionEvent) throw Error ('your browser is not support startAccelerometer')
+      if (!window.DeviceMotionEvent) throw Error('your browser is not support startAccelerometer')
       window.addEventListener('devicemotion', this.accleration, false)
       const res = {
         errMsg: 'startAccelerometer: ok'
       }
       SUCCESS(res)
-    },success, fail, complete)
-    
+    }, success, fail, complete)
+
   }
 
   stopAccelerometer(options) {
-    const {success, fail, complete} = options
+    const {
+      success,
+      fail,
+      complete
+    } = options
     options = null
     PROMISE(SUCCESS => {
       window.removeEventListener('devicemotion', this.accleration, false)
@@ -1827,7 +1870,7 @@ export default class WX {
         errMsg: 'stopAccelerometer: ok'
       }
       SUCCESS(res)
-    },success, fail, complete)
+    }, success, fail, complete)
   }
 
   onCompassChange(callback) {
@@ -1840,7 +1883,11 @@ export default class WX {
   }
 
   startCompass(options) {
-    const {success, fail, complete} = options
+    const {
+      success,
+      fail,
+      complete
+    } = options
     options = null
 
     PROMISE(SUCCESS => {
@@ -1850,11 +1897,15 @@ export default class WX {
       }
 
       SUCCESS(res)
-    },success, fail, complete)
+    }, success, fail, complete)
   }
 
   stopCompass(options) {
-    const {success, fail, complete} = options
+    const {
+      success,
+      fail,
+      complete
+    } = options
     options = null
     PROMISE(SUCCESS => {
       window.removeEventListener('deviceorientation', this.compasschange_callback, false)
@@ -1866,7 +1917,12 @@ export default class WX {
   }
 
   makePhoneCall(options) {
-    const {phoneNumber, success, fail, complete} = options
+    const {
+      phoneNumber,
+      success,
+      fail,
+      complete
+    } = options
 
     PROMISE(SUCCESS => {
       location.href = 'tel:' + phoneNumber
@@ -1874,12 +1930,16 @@ export default class WX {
         errMsg: 'makePhoneCall: ok'
       }
       SUCCESS(res)
-    },success, fail, complete)
-    
+    }, success, fail, complete)
+
   }
 
   scanCode(options) {
-    const {success, fail, complete} = options
+    const {
+      success,
+      fail,
+      complete
+    } = options
     options = null
 
     PROMISE(SUCCESS => {
@@ -1888,11 +1948,15 @@ export default class WX {
       }
 
       SUCCESS(res)
-    },success, fail, complete)
+    }, success, fail, complete)
   }
 
   getClipboardData(options) {
-    const {success, fail, complete} = options
+    const {
+      success,
+      fail,
+      complete
+    } = options
     options = null
     PROMISE(SUCCESS => {
       function handler(event) {
@@ -1906,13 +1970,18 @@ export default class WX {
       }
       document.addEventListener('copy', handler)
       document.execCommand('copy')
-     
+
 
     }, success, fail, complete)
   }
 
   setClipboardData(options) {
-    const {data, success, fail, complete} = options
+    const {
+      data,
+      success,
+      fail,
+      complete
+    } = options
     options = null
 
     PROMISE(SUCCESS => {
@@ -1925,18 +1994,23 @@ export default class WX {
       }
       document.addEventListener('copy', handler)
       document.execCommand('copy')
-      
-    },success, fail, complete)
+
+    }, success, fail, complete)
   }
 
   setKeepScreenOn(options) {
-    const {keepScreenOn, success, fail, complete} = options
+    const {
+      keepScreenOn,
+      success,
+      fail,
+      complete
+    } = options
     options = null
     PROMISE(SUCCESS => {
       const nosleep = new NoSleep()
-      if(keepScreenOn) {
+      if (keepScreenOn) {
         nosleep.enable()
-      }else {
+      } else {
         nosleep.disable()
       }
       const res = {
@@ -1944,20 +2018,20 @@ export default class WX {
       }
 
       SUCCESS(res)
-    },success, fail, complete)
+    }, success, fail, complete)
   }
 
   onUserCaptureScreen(callback) {
     this.captureScreen_callback = function event_captureScreen() {
       const key = arguments[0]
-        if(key.altKey && key.key === 'a' ) {
-          callback()
-        }
-        if(key.key == 's' && key.shiftKey){
-          callback()
-        }
+      if (key.altKey && key.key === 'a') {
+        callback()
       }
-    window.addEventListener('keyup', this.captureScreen_callback)  
+      if (key.key == 's' && key.shiftKey) {
+        callback()
+      }
+    }
+    window.addEventListener('keyup', this.captureScreen_callback)
   }
 
   offUserCaptureScreen(callback) {
@@ -1966,21 +2040,25 @@ export default class WX {
   }
 
   getScreenBrightness(options) {
-    const {success, fail, complete} = options
+    const {
+      success,
+      fail,
+      complete
+    } = options
     options = null
     PROMISE(SUCCESS => {
       const userAgent = navigator.userAgent
-      if(!userAgent.indexOf('Firefox') > -1) throw Error('your browser is not suppport getScreenBrightness')
+      if (!userAgent.indexOf('Firefox') > -1) throw Error('your browser is not suppport getScreenBrightness')
       window.addEventListener('devicelight', e => {
         const res = {
           value: e.value / 1000,
           errMsg: 'getScreenBrightness: ok'
         }
-  
+
         SUCCESS(res)
       })
-      
-    },success, fail, complete)
+
+    }, success, fail, complete)
   }
 
   setScreenBrightness() {
@@ -1988,18 +2066,22 @@ export default class WX {
   }
 
   vibrateShort(options) {
-    const {success, fail, complete} = options
+    const {
+      success,
+      fail,
+      complete
+    } = options
     options = null
     PROMISE(SUCCESS => {
       navigator.vibrate = navigator.vibrate || navigator.webkitVibrate || navigator.mozVibrate || navigator.msVibrate
-      if(!navigator.vibrate) throw Error('your browser is not support vibrateShort')
+      if (!navigator.vibrate) throw Error('your browser is not support vibrateShort')
       const mobile = navigator.userAgent
 
-      if(mobile.indexOf('Android') > -1 || mobile.indexOf('Linux') > -1) {
+      if (mobile.indexOf('Android') > -1 || mobile.indexOf('Linux') > -1) {
         window.navigator.vibrate(30)
-      }else if(!!mobile.match(/\(i[^;]+;( U;)? CPU.+Mac OS X/)) {
+      } else if (!!mobile.match(/\(i[^;]+;( U;)? CPU.+Mac OS X/)) {
         window.navigator.vibrate(15)
-      }else {
+      } else {
         throw Error('Your phone is not smart phone')
       }
 
@@ -2008,26 +2090,30 @@ export default class WX {
       }
 
       SUCCESS(res)
-    },success, fail, complete)
+    }, success, fail, complete)
   }
 
   vibrateLong(options) {
-    const {success, fail, complete} = options
+    const {
+      success,
+      fail,
+      complete
+    } = options
     options = null
     PROMISE(SUCCESS => {
       navigator.vibrate = navigator.vibrate || navigator.webkitVibrate || navigator.mozVibrate || navigator.msVibrate
-      if(!navigator.vibrate) throw Error('your browser is not support vibrateLong')
+      if (!navigator.vibrate) throw Error('your browser is not support vibrateLong')
       window.navigator.vibrate(400)
       const res = {
         errMsg: 'vibrateShort: ok'
       }
       SUCCESS(res)
-    },success, fail, complete)
+    }, success, fail, complete)
   }
 
-  onMemoryWarning(callback) { 
+  onMemoryWarning(callback) {
     function _sourceful() {
-      if(!window.performance.memory) throw Error('your browser is not support onMemoryWarning')
+      if (!window.performance.memory) throw Error('your browser is not support onMemoryWarning')
       const res = {}
       res.level = 1
       const memoryInfo = window.performance.memory
@@ -2128,36 +2214,35 @@ export default class WX {
 
     this._mapinit()
     PROMISE(SUCCESS => {
-      
-    window.addEventListener("load", () => {
-      const mapObj = new AMap.Map('iCenter')
-      mapObj.plugin('AMap.Geolocation', () => {
-      const geolocation  = new AMap.Geolocation()
-      mapObj.addControl(geolocation)
-      geolocation.getCurrentPosition()
-      AMap.event.addListener(geolocation, 'complete', onComplete => {
-        const resu = {
-          accuracy: onComplete.accuracy,
-          altitude: onComplete.accuracy,
-          city: onComplete.addressComponent.city,
-          errMsg: 'getLocation: ok',
-          horizonralAccuracy: onComplete.accuracy,
-          latitude: onComplete.position.lat,
-          longitude: onComplete.position.lng,
-          speed: onComplete.status,
-          verticalAccuracy: onComplete.accuracy
-        }
-        SUCCESS(resu)
-        
-      })
-        AMap.event.addListener(geolocation, 'error', onError)
+
+      window.addEventListener("load", () => {
+        const mapObj = new AMap.Map('iCenter')
+        mapObj.plugin('AMap.Geolocation', () => {
+          const geolocation = new AMap.Geolocation()
+          mapObj.addControl(geolocation)
+          geolocation.getCurrentPosition()
+          AMap.event.addListener(geolocation, 'complete', onComplete => {
+            const resu = {
+              accuracy: onComplete.accuracy,
+              altitude: onComplete.accuracy,
+              city: onComplete.addressComponent.city,
+              errMsg: 'getLocation: ok',
+              horizonralAccuracy: onComplete.accuracy,
+              latitude: onComplete.position.lat,
+              longitude: onComplete.position.lng,
+              speed: onComplete.status,
+              verticalAccuracy: onComplete.accuracy
+            }
+            SUCCESS(resu)
+
+          })
+          AMap.event.addListener(geolocation, 'error', onError)
         })
-      }
-    ) 
-    },success, fail, complete)
+      })
+    }, success, fail, complete)
   }
 
- /////////////////////////////////////////////////
+  /////////////////////////////////////////////////
   setInnerAudioOption() {}
   getAvailableAudioSources() {}
 
@@ -2781,7 +2866,7 @@ export default class WX {
       }
     })
   }
-  
+
   _callback(event) {
     if (this.fn_global().Accelerometer_callback) {
       const acceleration = event.accelerationIncludingGravity
@@ -3383,7 +3468,7 @@ export default class WX {
   hideShareMenu() {}
 
   getShareInfo() {}
-  
+
   authPrivateMessage() {}
 
 
