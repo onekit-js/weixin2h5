@@ -1,6 +1,6 @@
 export default class UpdateManager {
   applyUpdate() {
-
+    console.warn('html5 is not support')
   }
   onCheckForUpdate(callback) {
     const res = {
@@ -8,6 +8,10 @@ export default class UpdateManager {
     }
     callback(res)
   }
-  onUpdateFailed() {}
-  onUpdateReady() {}
+  onUpdateFailed() {
+    console.warn('html5 is not support')
+  }
+  onUpdateReady() {
+    console.warn('html5 is not support')
+  }
 }

@@ -19,10 +19,11 @@ import MobileDetect from 'mobile-detect'
 import BackgroundManager from './api/BackgroundAudioManager'
 import InnerAudioContext from './api/InnerAudioContext'
 import VideoContext from './api/VideoContext'
-import LivePlayerContext from './api/LivePlayerContext'
+import LivePusherContext from './api/LivePusherContext'
 import CameraContext from './api/CameraContext'
-import MapContext from './api/MapContext'
+import LivePlayerContext from './api/LivePusherContext'
 import FileSystemManager from './api/FileSystemManager'
+import MediaContainer from './api/MediaContainer'
 import 'jquery-confirm'
 import 'jquery-confirm/css/jquery-confirm.css'
 import './js/PrevewImage'
@@ -124,6 +125,7 @@ export default class WX {
     return true
   }
   /** 应用级事件 */
+
   onUnhandledRejection(wx_callback) {
     this.fn_global().onUnhandledRejection = wx_callback
   }
@@ -191,7 +193,7 @@ export default class WX {
 
   get env() {
     const VERSION = 'production'
-    const USER_DATA_PATH = 'ttfile://user'
+    const USER_DATA_PATH = 'wxfile://user'
     const obj = {
       VERSION,
       USER_DATA_PATH,
@@ -277,6 +279,7 @@ export default class WX {
     }
     return animation
   }
+
   /** 网络 */
   request(wx_object) {
     const url = wx_object.url
@@ -416,9 +419,9 @@ export default class WX {
     // /////////////////
 
     let blob
-    if (filePath.startsWith('ttfile://store/onekit_')) {
+    if (filePath.startsWith('wxfile://store/onekit_')) {
       blob = null // sessionStorage.getItem(filePath)
-    } else if (filePath.startsWith('ttfile://tmp_onekit_')) {
+    } else if (filePath.startsWith('wxfile://tmp_onekit_')) {
       blob = this.fn_global().TEMP[filePath]
     } else {
       throw new Error(filePath)
@@ -846,7 +849,7 @@ export default class WX {
       const eImage = document.createElement('img')
       eImage.setAttribute('crossOrigin', 'Anonymous')
       const pic_res = new Image()
-      if (vue_src.startsWith('ttfile://tmp_onekit_')) {
+      if (vue_src.startsWith('wxfile://tmp_onekit_')) {
         const blob = this.fn_global().TEMP[vue_src]
         TheKit.blobToBase64(blob, (res) => {
           vue_src = res
@@ -872,7 +875,7 @@ export default class WX {
     const wx_complete = wx_object.complete
     PROMISE((SUCCESS) => {
       const vue_src = wx_src
-      if (vue_src.startsWith('ttfile://tmp_onekit')) {
+      if (vue_src.startsWith('wxfile://tmp_onekit')) {
         console.log('临时路径')
         const blob = this.fn_global().TEMP[vue_src]
         TheKit.blobToBase64(blob, (res) => {
@@ -1008,7 +1011,7 @@ export default class WX {
     const wx_fail = wx_object.fail
     const wx_complete = wx_object.complete
     PROMISE((SUCCESS) => {
-      if (wx_urls[0].startsWith('ttfile://tmp_onekit_')) {
+      if (wx_urls[0].startsWith('wxfile://tmp_onekit_')) {
         const blobs = []
         for (const i in wx_urls) {
           blobs.push(this.fn_global().TEMP[wx_urls[i]])
@@ -1305,6 +1308,46 @@ export default class WX {
 
   //////////////////// 录音 //////////////////////////
 
+  startRecord() {
+    //  let wx_success = wx_object.success
+    // let wx_fail = wx_object.success
+    //  let wx_complete = wx_object.success
+    // ////////////////////////////
+    try {
+      this.startRecord()
+    } catch (error) {
+      const wx_res = {}
+      wx_res.errMsg = error.message
+      console.log(wx_res)
+    }
+  }
+
+  stopRecord(wx_object) {
+    const wx_success = wx_object.success
+    const wx_fail = wx_object.success
+    const wx_complete = wx_object.success
+    // ////////////////////////////
+    const wx_res = {}
+    // let localId
+    this.stopRecord({
+      success: function (res) {
+        if (wx_success) {
+          wx_res.errMsg = 'startRecord:ok'
+          wx_res.tempFilePath = res.localId // 小程序中会返回录音文件的临时存放路径 tempFilePath ，JS-SDK中会返回录音文件的 localId ，所以这里直接将 localId 赋值给 tempFilePath，让用户获取 tempFilePath 来播放录音。
+          wx_success(wx_res)
+        }
+      },
+      fail: function (wx_res) {
+        wx_fail(wx_res)
+      },
+      complete: function (wx_res) {
+        if (wx_complete) {
+          wx_complete(wx_res)
+        }
+      },
+    })
+  }
+
   getRecorderManager() {
     navigator.getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia || navigator.msGetUserMedia
     if (navigator.getUserMedia) {
@@ -1357,6 +1400,19 @@ export default class WX {
     }
   }
 
+  createMediaAudioPlayer() {
+
+  }
+
+  //////////////////// 实时音视频 ////////////////////
+
+  createLivePusherContext() {
+    return new LivePusherContext()
+  }
+
+  createLivePlayerContext(id, component) {
+    return new LivePlayerContext(id, component)
+  }
   //////////////////// 视频  ///////////////////////
 
   chooseVideo(options) {
@@ -1409,9 +1465,7 @@ export default class WX {
     }
   }
 
-  createLivePlayerContext(id, component) {
-    return new LivePlayerContext(id, component)
-  }
+  openVideoEditor() {}
 
   ////////////////// 相机 //////////////////////////
 
@@ -1419,7 +1473,35 @@ export default class WX {
     return new CameraContext()
   }
 
+  ////////////////// 音视频合成  ///////////////////
+  createMediaContainer() {
+    return new MediaContainer()
+  }
 
+  ///////////////// 实时语音 //////////////////////
+
+  updateVoIPChatMuteConfig() {}
+
+  subscribeVoIPVideoMembers() {}
+
+  onVoIPVideoMembersChanged() {}
+
+  onVoIPChatSpeakersChanged() {}
+
+  onVoIPChatInterrupted() {}
+  
+  offVoIPVideoMembersChanged() {}
+
+  offVoIPChatMembersChanged() {}
+
+  offVoIPChatInterrupted() {}
+
+  joinVoIPChat() {}
+
+  exitVoIPChat() {}
+
+  ////////////////////  画面录制器 //////////////////
+  createMediaRecorder() {}
   ///////////////////// 文件  //////////////////////
 
   saveFile(options) {
@@ -2001,7 +2083,6 @@ export default class WX {
   setInnerAudioOption() {}
   getAvailableAudioSources() {}
 
-  
 
   getBackgroundAudioPlayerState(wx_object) {
     const wx_success = wx_object.success
@@ -2287,45 +2368,7 @@ export default class WX {
 
   // LivePusher
 
-  startRecord() {
-    //  let wx_success = wx_object.success
-    // let wx_fail = wx_object.success
-    //  let wx_complete = wx_object.success
-    // ////////////////////////////
-    try {
-      this.startRecord()
-    } catch (error) {
-      const wx_res = {}
-      wx_res.errMsg = error.message
-      console.log(wx_res)
-    }
-  }
 
-  stopRecord(wx_object) {
-    const wx_success = wx_object.success
-    const wx_fail = wx_object.success
-    const wx_complete = wx_object.success
-    // ////////////////////////////
-    const wx_res = {}
-    // let localId
-    this.stopRecord({
-      success: function (res) {
-        if (wx_success) {
-          wx_res.errMsg = 'startRecord:ok'
-          wx_res.tempFilePath = res.localId // 小程序中会返回录音文件的临时存放路径 tempFilePath ，JS-SDK中会返回录音文件的 localId ，所以这里直接将 localId 赋值给 tempFilePath，让用户获取 tempFilePath 来播放录音。
-          wx_success(wx_res)
-        }
-      },
-      fail: function (wx_res) {
-        wx_fail(wx_res)
-      },
-      complete: function (wx_res) {
-        if (wx_complete) {
-          wx_complete(wx_res)
-        }
-      },
-    })
-  }
 
   // CameraFrameListener
 
@@ -3316,20 +3359,45 @@ export default class WX {
   pauseVoice() {}
   stopVoice() {}
 
+  onKeyboardHeightChange() {
+    console.warn('onKeyboardHeightChange are not currently supported')
+  }
 
+  offKeyboardHeightChange() {
+    console.warn('offKeyboardHeightChange are not currently supported')
+  }
 
-  onKeyboardHeightChange() {}
-  offKeyboardHeightChange() {}
-  hideKeyboard() {}
-  getSelectedTextRange() {}
+  hideKeyboard() {
+    console.warn('offKeyboardHeightChange are not currently supported')
+  }
 
-  getMenuButtonBoundingClientRect() {}
+  getSelectedTextRange() {
+    console.warn('getSelectedTextRange are not currently supported')
+  }
 
-  setTopBarText() {}
+  getMenuButtonBoundingClientRect() {
+    console.warn('getMenuButtonBoundingClientRect are not currently supported')
+  }
 
-  setWindowSize() {}
-  onWindowResize() {}
-  offWindowResize() {}
+  setTopBarText() {
+    console.warn('setTopBarText are not currently supported ')
+  }
+
+  nextTick(callback) {
+    this.fn_global.$nextTick(callback)
+  }
+
+  setWindowSize() {
+    console.warn('setWindowSize are not currently supported!')
+  }
+
+  onWindowResize() {
+    console.warn('onWindowResize are not currently supported')
+  }
+
+  offWindowResize() {
+    console.warn('offWindowResize are not currently supported')
+  }
   appHide_callback() {
     let wx_res
     if (document.hidden) {

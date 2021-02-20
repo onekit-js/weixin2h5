@@ -39,4 +39,5 @@ export default class RequestTask {
   offHeadersReceived() {
     this.onHeadersReceived = null
   }
+  
 }
