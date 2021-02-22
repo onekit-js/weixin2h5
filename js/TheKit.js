@@ -157,18 +157,6 @@ static raiseEvent(target, type, e) {
 }
 
 
-static fixurl(wx_rel_url) {
-  const wx_abs_url = PATH.res2abs(currentUrl(), wx_rel_url)
-  if (Vue.prototype.APP_JSON.pages.indexOf(wx_abs_url) < 0) {
-    if (Vue.prototype.onPageNotFound) {
-      Vue.prototype.onPageNotFound();
-    }
-  }
-  const vue_path = wx_abs_url // ...
-  return vue_path
-}
-
-
 header2json(str) {
   var strArray = str.split('\n');
   var headers = {};
