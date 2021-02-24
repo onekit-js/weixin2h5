@@ -10,7 +10,10 @@ export default class VideoDecoder {
   
   seek() {}
   
-  start() {}
+  start(wx_object) {
+    const {source, mode } = wx_object
+    console.log(source, mode)
+  }
   
   stop() {}
 }

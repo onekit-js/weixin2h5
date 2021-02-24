@@ -5,10 +5,15 @@
 </template>
 
 <script>
-  import wx from '../../wx'
+  import WX from '../../wx'
+  import Vue from 'vue'
+  const wx = new WX(Vue.prototype)
   export default {
     created() {
-      console.log(wx)
+      const videoDecoder = wx.createVideoDecoder()
+      videoDecoder.start({
+        source: './assets/logo.png'
+      })
     }
   }
 </script>
