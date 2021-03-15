@@ -35,6 +35,7 @@ import AudioContext from './api/AudioContext'
 import MediaRecorder from './api/MediaRecorder'
 import UDPSocket from './api/UDPSocket'
 import NFCAdapter from './api/NFCAdapter'
+import Worker from './api/Worker'
 
 export default class WX {
   constructor(fn_global) {
@@ -54,6 +55,66 @@ export default class WX {
   arrayBufferToBase64(arrayBuffer) {
     return STRING.arrayBufferToBase64(arrayBuffer)
   }
+
+  /** 系统 */
+  /**** 系统信息 ****/
+  getSystemInfoSync() {
+    try {
+      const device_type = navigator.userAgent
+      const md = new MobileDetect(device_type)
+      const os = md.os()
+      let model
+      let system
+      let platform
+      switch (os) {
+        case 'iOS':
+          model = md.mobile()
+          system = 'ios' + md.version('iPhone'),
+            platform = 'ios'
+          break
+        case 'AndroidOS':
+          system = 'Android ' + md.version('Android')
+          model = md.mobile()
+          platform = 'android'
+          break
+      }
+      return {
+        brand: 'www.onekit.cn',
+        model: model,
+        pixelRatio: window.devicePixelRatio,
+        screenWidth: window.screen.width,
+        screenHeight: window.screen.height,
+        windowWidth: window.innerWidth,
+        windowHeight: window.innerHeight,
+        statusBarHeight: 20,
+        language: window.navigator.language,
+        version: '7.0',
+        system: system,
+        platform: platform,
+        fontSizeSetting: 20,
+        SDKVersion: '2.12.1',
+        benchmarkLevel: 1,
+        theme: 'light',
+      }
+    } catch (e) {
+      throw new Error('getSystemInfoSync:fail')
+    }
+  }
+
+  getSystemInfo(options) {
+    const {
+      success,
+      fail,
+      complete
+    } = options
+    options = null
+    // ///////////////////////////
+    PROMISE(SUCCESS => {
+      const res = this.getSystemInfoSync()
+      SUCCESS(res)
+    }, success, fail, complete)
+  }
+
 
   /** 更新 */
   updateWeChatApp(wx_object) {
@@ -2052,21 +2113,227 @@ export default class WX {
     })
   }
 
+  //////////////////// 开放接口接口////////////////////
+  /** 登陆 */
+  login() {
+    const weiXdeng = document.createElement('button')
+    weiXdeng.setAttribute('id', 'weiXingDeng')
+    weiXdeng.setAttribute('style', 'width:80%margin:20px 0 0 10%')
+    weiXdeng.setAttribute('onclick', 'OpenInterface.weixinDian()')
+    weiXdeng.innerText = '微信登录'
+    const firstDian = document.body.firstChild
+    document.body.insertBefore(weiXdeng, firstDian)
+    const zhiFdeng = document.createElement('button')
+    zhiFdeng.setAttribute('id', 'zhiFBDeng')
+    zhiFdeng.setAttribute('style', 'width:80%margin:20px 0 0 10%')
+    zhiFdeng.setAttribute('onclick', 'OpenInterface.zhiFBDian()')
+    zhiFdeng.innerText = '支付宝登录'
+    document.body.appendChild(zhiFdeng)
+    const weiBdeng = document.createElement('button')
+    weiBdeng.setAttribute('id', 'weiBoDeng')
+    weiBdeng.setAttribute('style', 'width:80%margin:20px 0 0 10%')
+    weiBdeng.setAttribute('onclick', 'OpenInterface.weiBoDian()')
+    weiBdeng.innerText = '微博登录'
+    document.body.appendChild(weiBdeng)
+    const QQdeng = document.createElement('button')
+    QQdeng.setAttribute('id', 'QQDeng')
+    QQdeng.setAttribute('style', 'width:80%margin:20px 0 0 10%')
+    QQdeng.setAttribute('onclick', 'OpenInterface.QQDian()')
+    QQdeng.innerText = 'QQ登录'
+    document.body.appendChild(QQdeng)
+  }
+  weixinDian() {
+    location.href =
+      'https://open.weixin.qq.com/connect/qrconnect?appid=wx240ff52c65528fbb&scope=snsapi_login&redirect_uri=https%3A%2F%2Fwww.onekit.com%2Fpassport0%2Flogin%2FPlogin.php&state=' +
+      Math.ceil(Math.random() * 1000) +
+      '&login_type=jssdk&self_redirect=default'
+  }
+  zhiFBDian() {
+    location.href =
+      'https://openauth.alipay.com/oauth2/publicAppAuthorize.htm?app_id=2018030502321064&scope=auth_user&redirect_uri=https://www.onekit.com/passport/login/ZFlogin.php&state=' +
+      Math.ceil(Math.random() * 1000)
+  }
+  weiBoDian() {
+    location.href =
+      'https://api.weibo.com/oauth2/authorize?client_id=1741134067&redirect_uri=https%3A%2F%2Fwww.onekit.cn%2Fpassport0%2Flogin%2FWBlogin%2FWlogin.php&response_type=code'
+  }
+  QQDian() {
+    location.href =
+      'https://graph.qq.com/oauth2.0/authorize?response_type=code&client_id=101475870&redirect_uri=https://www.onekit.cn/passport0/login/QQlogin.php&state=' +
+      Math.ceil(Math.random() * 1000)
+  }
+
+  checkSession() {}
+
+  /** 小程序跳转 */
+  navigateToMiniProgram() {}
+
+  navigateBackMiniProgram() {}
+
+  /** 账号信息 */
+  getAccountInfoSync() {}
+
+  getUserProfile() {}
+
+  getUserInfo() {}
+
+  /** 数据上报 */
+  reportMonitor() {}
+
+  reportEvent() {}
+
+  getExptInfoSync() {}
+
+  /** 数据分析 */
+  reportAnalytics() {
+
+  }
+
+  /** 支付 */
+  requestPayment(wx_object) {
+    // 小程序参数
+    const timestamp = wx_object.timestamp // 时间戳，从 1970 年 1 月 1 日 00:00:00 至今的秒数，即当前的时间
+    const nonceStr = wx_object.nonceStr // 随机字符串，长度为32个字符以下
+    const package_s = wx_object.package // 统一下单接口返回的 prepay_id 参数值，提交格式如：prepay_id=***（ package 为js关键词，所以取名为 package_s ）
+    const signType = wx_object.signType // 签名算法
+    const paySign = wx_object.paySign // 签名
+    const wx_success = wx_object.success || ''
+    const wx_fail = wx_object.fail || ''
+    const wx_complete = wx_object.complete || ''
+    //
+    const res = {}
+    this.chooseWXPay({
+      // JS-SDK参数
+      timestamp: timestamp, // 支付签名时间戳，注意微信jssdk中的所有使用timestamp字段均为小写。但最新版的支付后台生成签名使用的timeStamp字段名需大写其中的S字符
+      nonceStr: nonceStr, // 支付签名随机串，不长于 32 位
+      package: package_s, // 统一支付接口返回的prepay_id参数值，提交格式如：prepay_id=\*\*\*）
+      signType: signType, // 签名方式，默认为'SHA1'，使用新版支付需传入'MD5'
+      paySign: paySign, // 支付签名
+      success: wx_success(res),
+      fail: wx_fail(res),
+      complete: wx_complete(res),
+    })
+  }
+
+  /** 授权 */
+  authorizeForMiniProgram() {
+
+  }
+  authorize() {}
+
+  /** 设置 */
+  openSetting() {}
+
+  getSetting() {}
+
+  AuthSetting() {}
+
+  SubscriptionsSetting() {}
+  /** 收货地址 */
+  chooseAddress() {}
+
+  /** 卡劵 */
+  addCard(wx_object) {
+    const cardList = wx_object.cardList
+    const wx_success = wx_object.success || ''
+    const wx_fail = wx_object.fail || ''
+    const wx_complete = wx_object.complete || ''
+    // ///////////////////////////////
+    this.openCard({
+      cardList: cardList, // 需要添加的卡券列表
+      success: wx_success,
+      fail: wx_fail,
+      complete: wx_complete,
+    })
+  }
+
+  openCard(wx_object) {
+    const cardList = wx_object.cardList
+    const wx_success = wx_object.success || ''
+    const wx_fail = wx_object.fail || ''
+    const wx_complete = wx_object.complete || ''
+    // ///////////////////////////////
+    this.openCard({
+      cardList: cardList, // 需要打开的卡券列表
+      success: wx_success,
+      fail: wx_fail,
+      complete: wx_complete,
+    })
+  }
+
+  checkIsSupportSoterAuthentication() {}
+
+  startSoterAuthentication() {}
+
+  checkIsSoterEnrolledInDevice() {}
+
+  getWeRunData() {}
+
+  // 小程序和 JS-SDK 都有 iBeacon 的实现，但是貌似不一样
+  startBeaconDiscovery() {
+    // let uuids = wx_object.uuids
+    // let ignoreBluetoothAvailable = wx_object.ignoreBluetoothAvailable
+    // let wx_success = wx_object.success
+    // let wx_fail = wx_object.success
+    // let wx_complete = wx_object.success
+    // //////////////////////////////
+    // this.startSearchBeacons({
+    //   ticket: '', //摇周边的业务ticket, 系统自动添加在摇出来的页面链接后面
+    //   complete: function(argv) {
+    //     //开启查找完成后的回调函数
+    //   }
+    // })
+  }
+
+  stopBeaconDiscovery() {}
+
+  getBeacons() {}
+
+  onBeaconUpdate() {}
+
+  onBeaconServiceChange() {}
+
   //////////////////// 设备 ////////////////////
   /** Wi-Fi */
-  stopWiFi() {}
+  stopWiFi() {
+    const errMsg = 'h5 is not support onGetWifiList'
+    callback(errMsg)
+  }
 
-  startWiFi() {}
+  startWiFi() {
+    const errMsg = 'h5 is not support onGetWifiList'
+    callback(errMsg)
+  }
 
-  setWiFiList() {}
+  setWiFiList() {
+    const errMsg = 'h5 is not support onGetWifiList'
+    callback(errMsg)
+  }
 
-  onWiFiConnected() {}
+  onWiFiConnected() {
+    const errMsg = 'h5 is not support onGetWifiList'
+    callback(errMsg)
+  }
 
-  onGetWiFiList() {}
+  onGetWifiList(callback) {
+    const errMsg = 'h5 is not support onGetWifiList'
+    callback(errMsg)
+  }
 
-  offWifiConnected() {}
+  offWifiConnected() {
+    const errMsg = 'h5 is not support onGetWifiList'
+    callback(errMsg)
+  }
 
-  getWiFiList() {}
+  offGetWifiList(callback) {
+    const errMsg = 'h5 is not support offGetWifiList'
+    callback(errMsg)
+  }
+
+  getWifiList(options) {
+    options = null
+    console.warn('h5 is not support getwifiList')
+  }
 
   getConnectedWifi(options) {
     console.warn('h5 is not support getConnectedWifi')
@@ -2127,271 +2394,91 @@ export default class WX {
 
 
   /** 蓝牙 */
-  openBluetoothAdapter() {}
-
-  closeBluetoothAdapter() {}
-
-  getBluetoothAdapterState() {}
-
-  onBluetoothAdapterStateChange() {}
+  stopBluetoothDevicesDiscovery() {}
 
   startBluetoothDevicesDiscovery() {}
 
-  stopBluetoothDevicesDiscovery() {}
+  openBluetoothAdapter() {}
+
+  onBluetoothDeviceFound() {}
+
+  onBluetoothAdapterStateChange() {}
+
+  getBluetoothAdapterState() {}
 
   getBluetoothDevices() {}
 
   getConnectedBluetoothDevices() {}
 
-  onBluetoothDeviceFound() {}
-  //////////////////// 地理位置 ////////////////////
+  closeBluetoothAdapter() {}
 
-  _mapinit() {
-    const map_sdk = `https://webapi.amap.com/maps?v=1.4.15&key=${config.map.key}`
-    const jsapi = document.createElement('script')
-    jsapi.src = map_sdk
-    document.head.appendChild(jsapi)
-    window.addEventListener('load', () => {
-      const map_ui = '//webapi.amap.com/ui/1.1/main.js?v=1.1.1'
-      const jsuiapi = document.createElement('script')
-      jsuiapi.src = map_ui
-      document.head.appendChild(jsuiapi)
-    })
-    // document.head.removeChild(jsapi)
-  }
-
-  // chooseLocation(options) {
-  //   const {latitude, longitude, success, fail, complete} = options
-  //   PROMISE(SUCCESS => {
-  //     this._mapinit()
-  //     const map_container = document.createElement('div')
-  //     map_container.setAttribute('style', 'height:100vh;width:100vw;')
-  //     map_container.setAttribute('id', 'onekitmap-container')
-  //     document.body.appendChild(map_container)
-  //     const map = new AMap.Map('onekitmap-container', {
-  //       resizeEnable: true,
-  //       zoom: 16,
-  //       center: [longitude, latitude]
-  //     })
-  //     const center_maker = new AMap.Marker({
-  //       position: map.getCenter(),
-  //       draggable: true,
-  //       cursor: 'move',
-  //       // 设置拖拽效果
-  //       raiseOnDrag: true
-  //     })
-
-  //     center_maker.setMap(map)
-  //     map.getCenter(res => {
-  //       console.log(res)
-  //     })
-  //     center_maker.on('dragend', res => {
-  //       const {lng, lat} = res.lnglat
-  //       map.setCenter([lng, lat])
-  //       // AMap.event.addListener(geolocation, 'complete', onComplete => {
-  //         const geoCoder = new AMap.geoCoder({
-  //           city: ''
-  //         })
-
-  //        geoCoder.getAddress([lng, lat], (status, result) => {
-  //          console.log(status, result)
-  //        })
-  //         const resu = {
-  //           errMsg: 'getLocation: ok',
-  //           latitude: onComplete.position.lat,
-  //           longitude: onComplete.position.lng,
-  //           address: '',
-  //           address
-  //         }
-  //         SUCCESS(resu)
-
-  //       // })
-  //     })
-  //     const res = {
-
-  //     }
-  //     SUCCESS(res)
-  //   }, success, fail, complete)
-  // }
-
-
-  //////////////////// 设备 ////////////////////////
-  getNetworkType(options) {
-    const {
-      success,
-      fail,
-      complete
-    } = options
-    options = null
-
-    PROMISE(SUCCESS => {
-      const connectionInfo = navigator.connection
-      const networkType = connectionInfo.effectiveType
-      const res = {
-        networkType
-      }
-      SUCCESS(res)
-    }, success, fail, complete)
-  }
-
-  onNetworkStatusChange(callback) {
-    const connection = navigator.connection
-    const connectionInfo = {}
-    connectionInfo.isOnline = true
-    connectionInfo.networkType = connection.type || 'unknown'
-    connection.addEventListener('change', () => {
-      if (connection.type === 'cellular') {
-        if (connection.rtt < 270) {
-          connectionInfo.networkType = '4g'
-        } else if (270 <= connection.rtt < 1400) {
-          connectionInfo.networkType = '3g'
-        } else if (1400 <= connection.rtt) {
-          connectionInfo.networkType = '2g'
-        } else {
-          connectionInfo.networkType = 'unknown'
-        }
-      }
-      if (!navigator.onLine) {
-        connectionInfo.networkType = 'none'
-        connectionInfo.isOnline = false
-      }
-      callback(connectionInfo)
-    })
-  }
-
-  getWifiList(options) {
-    options = null
-    console.warn('h5 is not support getwifiList')
-  }
-
-  onGetWifiList(callback) {
-    const errMsg = 'h5 is not support onGetWifiList'
-    callback(errMsg)
-  }
-
-  offGetWifiList(callback) {
-    const errMsg = 'h5 is not support offGetWifiList'
-    callback(errMsg)
-  }
-
-  getSystemInfoSync() {
+  /** 电量 */
+  getBatteryInfoSync(wx_object) {
+    const wx_success = wx_object.success
+    const wx_fail = wx_object.success
+    const wx_complete = wx_object.success
+    // ////////////////////////////
     try {
-      const device_type = navigator.userAgent
-      const md = new MobileDetect(device_type)
-      const os = md.os()
-      let model
-      let system
-      let platform
-      switch (os) {
-        case 'iOS':
-          model = md.mobile()
-          system = 'ios' + md.version('iPhone'),
-            platform = 'ios'
-          break
-        case 'AndroidOS':
-          system = 'Android ' + md.version('Android')
-          model = md.mobile()
-          platform = 'android'
-          break
+      const wx_res = {}
+      navigator.getBattery().then(function (battery) {
+        wx_res.errMsg = 'getBatteryInfoSync:ok'
+        wx_res.level = battery.level * 100
+        wx_res.isCharging = battery.charging
+      })
+      if (wx_success) {
+        wx_success(wx_res)
       }
-      return {
-        brand: 'www.onekit.cn',
-        model: model,
-        pixelRatio: window.devicePixelRatio,
-        screenWidth: window.screen.width,
-        screenHeight: window.screen.height,
-        windowWidth: window.innerWidth,
-        windowHeight: window.innerHeight,
-        statusBarHeight: 20,
-        language: window.navigator.language,
-        version: '7.0',
-        system: system,
-        platform: platform,
-        fontSizeSetting: 20,
-        SDKVersion: '2.12.1',
-        benchmarkLevel: 1,
-        theme: 'light',
+      if (wx_complete) {
+        wx_complete(wx_res)
       }
-    } catch (e) {
-      throw new Error('getSystemInfoSync:fail')
+    } catch (error) {
+      const wx_res = {
+        errMsg: error.message,
+      }
+      if (wx_fail) {
+        wx_fail(wx_res)
+      }
+      if (wx_complete) {
+        wx_complete(wx_res)
+      }
     }
   }
 
-  getSystemInfo(options) {
-    const {
-      success,
-      fail,
-      complete
-    } = options
-    options = null
-    // ///////////////////////////
-    PROMISE(SUCCESS => {
-      const res = this.getSystemInfoSync()
-      SUCCESS(res)
-    }, success, fail, complete)
-  }
-
-
-
-  onAccelerometerChange(callback) {
-    this.accleration = function _eventListener(e) {
-      console.log(arguments[0])
-      const accelerationdata = arguments[0].accelerationIncludingGravity
-      let res = {
-        x: accelerationdata.x,
-        y: accelerationdata.y,
-        z: accelerationdata.z
+  getBatteryInfo(wx_object) {
+    const wx_success = wx_object.success
+    const wx_fail = wx_object.success
+    const wx_complete = wx_object.success
+    // ////////////////////////////
+    try {
+      const wx_res = {}
+      navigator.getBattery().then(function (battery) {
+        wx_res.errMsg = 'getBatteryInfo:ok'
+        wx_res.level = battery.level * 100
+        wx_res.isCharging = battery.charging
+      })
+      if (wx_success) {
+        wx_success(wx_res)
       }
-      callback(res)
+      if (wx_complete) {
+        wx_complete(wx_res)
+      }
+    } catch (error) {
+      const wx_res = {
+        errMsg: error.message,
+      }
+      if (wx_fail) {
+        wx_fail(wx_res)
+      }
+      if (wx_complete) {
+        wx_complete(wx_res)
+      }
     }
-    window.addEventListener('devicemotion', this.accleration, false)
   }
 
-  startAccelerometer(options) {
+  /** 剪贴板 */
+  setClipboardData(options) {
     const {
-      success,
-      fail,
-      complete
-    } = options
-    options = null
-    PROMISE(SUCCESS => {
-      if (!window.DeviceMotionEvent) throw Error('your browser is not support startAccelerometer')
-      window.addEventListener('devicemotion', this.accleration, false)
-      const res = {
-        errMsg: 'startAccelerometer: ok'
-      }
-      SUCCESS(res)
-    }, success, fail, complete)
-
-  }
-
-  stopAccelerometer(options) {
-    const {
-      success,
-      fail,
-      complete
-    } = options
-    options = null
-    PROMISE(SUCCESS => {
-      window.removeEventListener('devicemotion', this.accleration, false)
-      const res = {
-        errMsg: 'stopAccelerometer: ok'
-      }
-      SUCCESS(res)
-    }, success, fail, complete)
-  }
-
-  onCompassChange(callback) {
-    this.compasschange_callback = function compassevent_callbak() {
-      const duration = 360 - arguments[0].alpha
-      callback(duration)
-    }
-
-    window.addEventListener('deviceorientation', this.compasschange_callback, false)
-  }
-
-  startCompass(options) {
-    const {
+      data,
       success,
       fail,
       complete
@@ -2399,63 +2486,16 @@ export default class WX {
     options = null
 
     PROMISE(SUCCESS => {
-      window.addEventListener('deviceorientation', this.compasschange_callback, false)
-      const res = {
-        errMsg: 'startCompass: ok'
+      function handler(event) {
+        event.clipboardData.setData('text/plain', data)
+        const res = {
+          errMsg: 'setClipboardData: ok'
+        }
+        SUCCESS(res)
       }
+      document.addEventListener('copy', handler)
+      document.execCommand('copy')
 
-      SUCCESS(res)
-    }, success, fail, complete)
-  }
-
-  stopCompass(options) {
-    const {
-      success,
-      fail,
-      complete
-    } = options
-    options = null
-    PROMISE(SUCCESS => {
-      window.removeEventListener('deviceorientation', this.compasschange_callback, false)
-      const res = {
-        errMsg: 'stopCompass: ok'
-      }
-      SUCCESS(res)
-    }, success, fail, complete)
-  }
-
-  makePhoneCall(options) {
-    const {
-      phoneNumber,
-      success,
-      fail,
-      complete
-    } = options
-
-    PROMISE(SUCCESS => {
-      location.href = 'tel:' + phoneNumber
-      const res = {
-        errMsg: 'makePhoneCall: ok'
-      }
-      SUCCESS(res)
-    }, success, fail, complete)
-
-  }
-
-  scanCode(options) {
-    const {
-      success,
-      fail,
-      complete
-    } = options
-    options = null
-
-    PROMISE(SUCCESS => {
-      const res = {
-        errMsg: 'scanCode is not support now'
-      }
-
-      SUCCESS(res)
     }, success, fail, complete)
   }
 
@@ -2483,9 +2523,59 @@ export default class WX {
     }, success, fail, complete)
   }
 
-  setClipboardData(options) {
+  /** 网络 */
+  onNetworkStatusChange(callback) {
+    const connection = navigator.connection
+    const connectionInfo = {}
+    connectionInfo.isOnline = true
+    connectionInfo.networkType = connection.type || 'unknown'
+    connection.addEventListener('change', () => {
+      if (connection.type === 'cellular') {
+        if (connection.rtt < 270) {
+          connectionInfo.networkType = '4g'
+        } else if (270 <= connection.rtt < 1400) {
+          connectionInfo.networkType = '3g'
+        } else if (1400 <= connection.rtt) {
+          connectionInfo.networkType = '2g'
+        } else {
+          connectionInfo.networkType = 'unknown'
+        }
+      }
+      if (!navigator.onLine) {
+        connectionInfo.networkType = 'none'
+        connectionInfo.isOnline = false
+      }
+      callback(connectionInfo)
+    })
+  }
+
+  offNetworkStatusChange(callback) {
+    const connection = navigator.connection
+    const connectionInfo = {}
+    connectionInfo.isOnline = true
+    connectionInfo.networkType = connection.type || 'unknown'
+    connection.removeEventListener('change', () => {
+      if (connection.type === 'cellular') {
+        if (connection.rtt < 270) {
+          connectionInfo.networkType = '4g'
+        } else if (270 <= connection.rtt < 1400) {
+          connectionInfo.networkType = '3g'
+        } else if (1400 <= connection.rtt) {
+          connectionInfo.networkType = '2g'
+        } else {
+          connectionInfo.networkType = 'unknown'
+        }
+      }
+      if (!navigator.onLine) {
+        connectionInfo.networkType = 'none'
+        connectionInfo.isOnline = false
+      }
+      callback(connectionInfo)
+    })
+  }
+
+  getNetworkType(options) {
     const {
-      data,
       success,
       fail,
       complete
@@ -2493,17 +2583,20 @@ export default class WX {
     options = null
 
     PROMISE(SUCCESS => {
-      function handler(event) {
-        event.clipboardData.setData('text/plain', data)
-        const res = {
-          errMsg: 'setClipboardData: ok'
-        }
-        SUCCESS(res)
+      const connectionInfo = navigator.connection
+      const networkType = connectionInfo.effectiveType
+      const res = {
+        networkType
       }
-      document.addEventListener('copy', handler)
-      document.execCommand('copy')
-
+      SUCCESS(res)
     }, success, fail, complete)
+  }
+
+  getRandomValues() {}
+
+  /** 屏幕 */
+  setScreenBrightness() {
+    console.warn('h5 is not support setScreenBrightness')
   }
 
   setKeepScreenOn(options) {
@@ -2569,361 +2662,26 @@ export default class WX {
     }, success, fail, complete)
   }
 
-  setScreenBrightness() {
-    console.warn('h5 is not support setScreenBrightness')
-  }
-
-  vibrateShort(options) {
+  /** 电话 */
+  makePhoneCall(options) {
     const {
+      phoneNumber,
       success,
       fail,
       complete
     } = options
-    options = null
+
     PROMISE(SUCCESS => {
-      navigator.vibrate = navigator.vibrate || navigator.webkitVibrate || navigator.mozVibrate || navigator.msVibrate
-      if (!navigator.vibrate) throw Error('your browser is not support vibrateShort')
-      const mobile = navigator.userAgent
-
-      if (mobile.indexOf('Android') > -1 || mobile.indexOf('Linux') > -1) {
-        window.navigator.vibrate(30)
-      } else if (!!mobile.match(/\(i[^;]+;( U;)? CPU.+Mac OS X/)) {
-        window.navigator.vibrate(15)
-      } else {
-        throw Error('Your phone is not smart phone')
-      }
-
+      location.href = 'tel:' + phoneNumber
       const res = {
-        errMsg: 'vibrateShort: ok'
-      }
-
-      SUCCESS(res)
-    }, success, fail, complete)
-  }
-
-  vibrateLong(options) {
-    const {
-      success,
-      fail,
-      complete
-    } = options
-    options = null
-    PROMISE(SUCCESS => {
-      navigator.vibrate = navigator.vibrate || navigator.webkitVibrate || navigator.mozVibrate || navigator.msVibrate
-      if (!navigator.vibrate) throw Error('your browser is not support vibrateLong')
-      window.navigator.vibrate(400)
-      const res = {
-        errMsg: 'vibrateShort: ok'
+        errMsg: 'makePhoneCall: ok'
       }
       SUCCESS(res)
     }, success, fail, complete)
-  }
-
-  onMemoryWarning(callback) {
-    function _sourceful() {
-      if (!window.performance.memory) throw Error('your browser is not support onMemoryWarning')
-      const res = {}
-      res.level = 1
-      const memoryInfo = window.performance.memory
-      const totalJSHeapSize = memoryInfo.totalJSHeapSize
-      const usedJSHeapSize = memoryInfo.usedJSHeapSize
-      const remainJsHeapSize = totalJSHeapSize - usedJSHeapSize
-      const MEMORY_MODERATE = totalJSHeapSize * 0.15
-      const MEMORY_LOW = totalJSHeapSize * 0.1
-      const MEMORY_CRITICAL = totalJSHeapSize * 0.05
-      if (MEMORY_LOW < remainJsHeapSize <= MEMORY_MODERATE) {
-        res.level = 5
-      } else if (MEMORY_CRITICAL < remainJsHeapSize <= MEMORY_LOW) {
-        res.level = 10
-      } else if (remainJsHeapSize <= MEMORY_CRITICAL) {
-        res.level = 15
-      } else {
-        res.level = ''
-      }
-      callback(res)
-    }
-
-    performance.onresourcetimingbufferful = _sourceful
-  }
-
-  /////////////////////////////////////////////////
-
-  // BackgroundAudioManager
-
-  // LivePusher
-
-  // share
-
-  getSavedFileList() {}
-
-
-
-  removeSavedFile() {}
-
-
-  login() {
-    const weiXdeng = document.createElement('button')
-    weiXdeng.setAttribute('id', 'weiXingDeng')
-    weiXdeng.setAttribute('style', 'width:80%margin:20px 0 0 10%')
-    weiXdeng.setAttribute('onclick', 'OpenInterface.weixinDian()')
-    weiXdeng.innerText = '微信登录'
-    const firstDian = document.body.firstChild
-    document.body.insertBefore(weiXdeng, firstDian)
-    const zhiFdeng = document.createElement('button')
-    zhiFdeng.setAttribute('id', 'zhiFBDeng')
-    zhiFdeng.setAttribute('style', 'width:80%margin:20px 0 0 10%')
-    zhiFdeng.setAttribute('onclick', 'OpenInterface.zhiFBDian()')
-    zhiFdeng.innerText = '支付宝登录'
-    document.body.appendChild(zhiFdeng)
-    const weiBdeng = document.createElement('button')
-    weiBdeng.setAttribute('id', 'weiBoDeng')
-    weiBdeng.setAttribute('style', 'width:80%margin:20px 0 0 10%')
-    weiBdeng.setAttribute('onclick', 'OpenInterface.weiBoDian()')
-    weiBdeng.innerText = '微博登录'
-    document.body.appendChild(weiBdeng)
-    const QQdeng = document.createElement('button')
-    QQdeng.setAttribute('id', 'QQDeng')
-    QQdeng.setAttribute('style', 'width:80%margin:20px 0 0 10%')
-    QQdeng.setAttribute('onclick', 'OpenInterface.QQDian()')
-    QQdeng.innerText = 'QQ登录'
-    document.body.appendChild(QQdeng)
-  }
-  weixinDian() {
-    location.href =
-      'https://open.weixin.qq.com/connect/qrconnect?appid=wx240ff52c65528fbb&scope=snsapi_login&redirect_uri=https%3A%2F%2Fwww.onekit.com%2Fpassport0%2Flogin%2FPlogin.php&state=' +
-      Math.ceil(Math.random() * 1000) +
-      '&login_type=jssdk&self_redirect=default'
-  }
-  zhiFBDian() {
-    location.href =
-      'https://openauth.alipay.com/oauth2/publicAppAuthorize.htm?app_id=2018030502321064&scope=auth_user&redirect_uri=https://www.onekit.com/passport/login/ZFlogin.php&state=' +
-      Math.ceil(Math.random() * 1000)
-  }
-  weiBoDian() {
-    location.href =
-      'https://api.weibo.com/oauth2/authorize?client_id=1741134067&redirect_uri=https%3A%2F%2Fwww.onekit.cn%2Fpassport0%2Flogin%2FWBlogin%2FWlogin.php&response_type=code'
-  }
-  QQDian() {
-    location.href =
-      'https://graph.qq.com/oauth2.0/authorize?response_type=code&client_id=101475870&redirect_uri=https://www.onekit.cn/passport0/login/QQlogin.php&state=' +
-      Math.ceil(Math.random() * 1000)
-  }
-
-  checkSession() {}
-
-  reportMonitor() {}
-
-  reportAnalytics() {
 
   }
 
-  requestPayment(wx_object) {
-    // 小程序参数
-    const timestamp = wx_object.timestamp // 时间戳，从 1970 年 1 月 1 日 00:00:00 至今的秒数，即当前的时间
-    const nonceStr = wx_object.nonceStr // 随机字符串，长度为32个字符以下
-    const package_s = wx_object.package // 统一下单接口返回的 prepay_id 参数值，提交格式如：prepay_id=***（ package 为js关键词，所以取名为 package_s ）
-    const signType = wx_object.signType // 签名算法
-    const paySign = wx_object.paySign // 签名
-    const wx_success = wx_object.success || ''
-    const wx_fail = wx_object.fail || ''
-    const wx_complete = wx_object.complete || ''
-    //
-    const res = {}
-    this.chooseWXPay({
-      // JS-SDK参数
-      timestamp: timestamp, // 支付签名时间戳，注意微信jssdk中的所有使用timestamp字段均为小写。但最新版的支付后台生成签名使用的timeStamp字段名需大写其中的S字符
-      nonceStr: nonceStr, // 支付签名随机串，不长于 32 位
-      package: package_s, // 统一支付接口返回的prepay_id参数值，提交格式如：prepay_id=\*\*\*）
-      signType: signType, // 签名方式，默认为'SHA1'，使用新版支付需传入'MD5'
-      paySign: paySign, // 支付签名
-      success: wx_success(res),
-      fail: wx_fail(res),
-      complete: wx_complete(res),
-    })
-  }
-
-
-  openSetting() {}
-
-  getSetting() {}
-
-  // Address
-
-  addCard(wx_object) {
-    const cardList = wx_object.cardList
-    const wx_success = wx_object.success || ''
-    const wx_fail = wx_object.fail || ''
-    const wx_complete = wx_object.complete || ''
-    // ///////////////////////////////
-    this.openCard({
-      cardList: cardList, // 需要添加的卡券列表
-      success: wx_success,
-      fail: wx_fail,
-      complete: wx_complete,
-    })
-  }
-
-  openCard(wx_object) {
-    const cardList = wx_object.cardList
-    const wx_success = wx_object.success || ''
-    const wx_fail = wx_object.fail || ''
-    const wx_complete = wx_object.complete || ''
-    // ///////////////////////////////
-    this.openCard({
-      cardList: cardList, // 需要打开的卡券列表
-      success: wx_success,
-      fail: wx_fail,
-      complete: wx_complete,
-    })
-  }
-
-  checkIsSupportSoterAuthentication() {}
-
-  startSoterAuthentication() {}
-
-  checkIsSoterEnrolledInDevice() {}
-
-  getWeRunData() {}
-
-  // 小程序和 JS-SDK 都有 iBeacon 的实现，但是貌似不一样
-  startBeaconDiscovery() {
-    // let uuids = wx_object.uuids
-    // let ignoreBluetoothAvailable = wx_object.ignoreBluetoothAvailable
-    // let wx_success = wx_object.success
-    // let wx_fail = wx_object.success
-    // let wx_complete = wx_object.success
-    // //////////////////////////////
-    // this.startSearchBeacons({
-    //   ticket: '', //摇周边的业务ticket, 系统自动添加在摇出来的页面链接后面
-    //   complete: function(argv) {
-    //     //开启查找完成后的回调函数
-    //   }
-    // })
-  }
-
-  stopBeaconDiscovery() {}
-
-  getBeacons() {}
-
-  onBeaconUpdate() {}
-
-  onBeaconServiceChange() {}
-
-
-
-  
-
-  // TODO: 未改未测试
-  // HACK: 应该不能通过web方式实现
-  addPhoneContact(wx_object) {
-    const phoneNumber = wx_object.phoneNumber
-    const wx_success = wx_object.success
-    const wx_fail = wx_object.fail
-    const wx_complete = wx_object.complete
-    let wx_res
-    try {
-      const oDiv = document.createElement('div')
-      oDiv.innerHTML = '<a  id=\'biaoDown\' href=\'#\' style=\'display: none\'></a>'
-      console.log(oDiv)
-      document.body.appendChild(oDiv)
-      const Url2 = document.getElementById('biaoDown')
-      Url2.setAttribute('href', 'wtai://wp/ap' + phoneNumber + '')
-      wx_res = {}
-      if (wx_success) {
-        wx_success(wx_res)
-      }
-      if (wx_complete) {
-        wx_complete(wx_res)
-      }
-    } catch (e) {
-      wx_res = {
-        errMsg: e.message,
-      }
-      if (wx_fail) {
-        wx_fail(wx_res)
-      }
-      if (wx_complete) {
-        wx_complete(wx_res)
-      }
-    }
-  }
-
-  getBatteryInfo(wx_object) {
-    const wx_success = wx_object.success
-    const wx_fail = wx_object.success
-    const wx_complete = wx_object.success
-    // ////////////////////////////
-    try {
-      const wx_res = {}
-      navigator.getBattery().then(function (battery) {
-        wx_res.errMsg = 'getBatteryInfo:ok'
-        wx_res.level = battery.level * 100
-        wx_res.isCharging = battery.charging
-      })
-      if (wx_success) {
-        wx_success(wx_res)
-      }
-      if (wx_complete) {
-        wx_complete(wx_res)
-      }
-    } catch (error) {
-      const wx_res = {
-        errMsg: error.message,
-      }
-      if (wx_fail) {
-        wx_fail(wx_res)
-      }
-      if (wx_complete) {
-        wx_complete(wx_res)
-      }
-    }
-  }
-
-  getBatteryInfoSync(wx_object) {
-    const wx_success = wx_object.success
-    const wx_fail = wx_object.success
-    const wx_complete = wx_object.success
-    // ////////////////////////////
-    try {
-      const wx_res = {}
-      navigator.getBattery().then(function (battery) {
-        wx_res.errMsg = 'getBatteryInfoSync:ok'
-        wx_res.level = battery.level * 100
-        wx_res.isCharging = battery.charging
-      })
-      if (wx_success) {
-        wx_success(wx_res)
-      }
-      if (wx_complete) {
-        wx_complete(wx_res)
-      }
-    } catch (error) {
-      const wx_res = {
-        errMsg: error.message,
-      }
-      if (wx_fail) {
-        wx_fail(wx_res)
-      }
-      if (wx_complete) {
-        wx_complete(wx_res)
-      }
-    }
-  }
-
-  captureScreen() {
-    html2canvas(document.body).then(function (canvas) {
-      // let ctx = cas.getContext('2d')
-      // canvas.width = 100, canvas.height = 100
-      const dataURL = canvas.toDataURL('image/png', 1)
-      if (this.fn_global().Screen_callback) {
-        const wx_res = {
-          image: dataURL,
-        }
-        this.fn_global().Screen_callback(wx_res)
-      }
-    })
-  }
-
+  /** 加速器 */
   _callback(event) {
     if (this.fn_global().Accelerometer_callback) {
       const acceleration = event.accelerationIncludingGravity
@@ -2936,7 +2694,120 @@ export default class WX {
     }
   }
 
+  stopAccelerometer(options) {
+    const {
+      success,
+      fail,
+      complete
+    } = options
+    options = null
+    PROMISE(SUCCESS => {
+      window.removeEventListener('devicemotion', this.accleration, false)
+      const res = {
+        errMsg: 'stopAccelerometer: ok'
+      }
+      SUCCESS(res)
+    }, success, fail, complete)
+  }
 
+  startAccelerometer(options) {
+    const {
+      success,
+      fail,
+      complete
+    } = options
+    options = null
+    PROMISE(SUCCESS => {
+      if (!window.DeviceMotionEvent) throw Error('your browser is not support startAccelerometer')
+      window.addEventListener('devicemotion', this.accleration, false)
+      const res = {
+        errMsg: 'startAccelerometer: ok'
+      }
+      SUCCESS(res)
+    }, success, fail, complete)
+
+  }
+
+  onAccelerometerChange(callback) {
+    this.accleration = function _eventListener(e) {
+      console.log(arguments[0])
+      const accelerationdata = arguments[0].accelerationIncludingGravity
+      let res = {
+        x: accelerationdata.x,
+        y: accelerationdata.y,
+        z: accelerationdata.z
+      }
+      callback(res)
+    }
+    window.addEventListener('devicemotion', this.accleration, false)
+  }
+
+  offAccelerometerChange(callback) {
+    his.accleration = function _eventListener(e) {
+      console.log(arguments[0])
+      const accelerationdata = arguments[0].accelerationIncludingGravity
+      let res = {
+        x: accelerationdata.x,
+        y: accelerationdata.y,
+        z: accelerationdata.z
+      }
+      callback(res)
+    }
+    window.removeEventListener('devicemotion', this.accleration, false)
+  }
+
+  /** 罗盘 */
+  stopCompass(options) {
+    const {
+      success,
+      fail,
+      complete
+    } = options
+    options = null
+    PROMISE(SUCCESS => {
+      window.removeEventListener('deviceorientation', this.compasschange_callback, false)
+      const res = {
+        errMsg: 'stopCompass: ok'
+      }
+      SUCCESS(res)
+    }, success, fail, complete)
+  }
+
+  startCompass(options) {
+    const {
+      success,
+      fail,
+      complete
+    } = options
+    options = null
+
+    PROMISE(SUCCESS => {
+      window.addEventListener('deviceorientation', this.compasschange_callback, false)
+      const res = {
+        errMsg: 'startCompass: ok'
+      }
+
+      SUCCESS(res)
+    }, success, fail, complete)
+  }
+
+  onCompassChange(callback) {
+    this.compasschange_callback = function compassevent_callbak() {
+      const duration = 360 - arguments[0].alpha
+      callback(duration)
+    }
+    window.addEventListener('deviceorientation', this.compasschange_callback, false)
+  }
+
+  offCompassChange(callback) {
+    this.compasschange_callback = function compassevent_callbak() {
+      const duration = 360 - arguments[0].alpha
+      callback(duration)
+    }
+    window.removeEventListener('deviceorientation', this.compasschange_callback, false)
+  }
+
+  /** 设备方向 */
   _deviceorientation(event) {
     if (this.fn_global().Compass_callback) {
       const wx_res = {
@@ -3036,6 +2907,50 @@ export default class WX {
     this.fn_global().DeviceMotioncallback = callback
   }
 
+  offDeviceMotionChange(callback) {
+    this.fn_global().DeviceMotioncallback = callback = {}
+  }
+
+  /** 陀螺仪 */
+  stopGyroscope(wx_object) {
+    if (!wx_object) {
+      wx_object = {}
+    }
+    const wx_success = wx_object.success
+    const wx_fail = wx_object.fail
+    const wx_complete = wx_object.complete
+    // ///////////////////////////////
+    let wx_res
+    try {
+      if (window.DeviceOrientationEvent) {
+        window.removeEventListener('devicemotion', this.fn_global().Gyroscope_callback, false)
+        wx_res = {
+          errMsg: 'stopGyroscope:ok',
+        }
+      } else {
+        wx_res = {
+          errMsg: 'stopGyroscope:fail',
+        }
+        if (wx_success) {
+          wx_success(wx_res)
+        }
+        if (wx_complete) {
+          wx_complete(wx_res)
+        }
+      }
+    } catch (error) {
+      wx_res = {
+        errMsg: error.message,
+      }
+      if (wx_fail) {
+        wx_fail(wx_res)
+      }
+      if (wx_complete) {
+        wx_complete(wx_res)
+      }
+    }
+  }
+
   startGyroscope(wx_object) {
     if (!wx_object) {
       wx_object = {}
@@ -3082,57 +2997,134 @@ export default class WX {
     }
   }
 
-  stopGyroscope(wx_object) {
-    if (!wx_object) {
-      wx_object = {}
-    }
-    const wx_success = wx_object.success
-    const wx_fail = wx_object.fail
-    const wx_complete = wx_object.complete
-    // ///////////////////////////////
-    let wx_res
-    try {
-      if (window.DeviceOrientationEvent) {
-        window.removeEventListener('devicemotion', this.fn_global().Gyroscope_callback, false)
-        wx_res = {
-          errMsg: 'stopGyroscope:ok',
-        }
-      } else {
-        wx_res = {
-          errMsg: 'stopGyroscope:fail',
-        }
-        if (wx_success) {
-          wx_success(wx_res)
-        }
-        if (wx_complete) {
-          wx_complete(wx_res)
-        }
-      }
-    } catch (error) {
-      wx_res = {
-        errMsg: error.message,
-      }
-      if (wx_fail) {
-        wx_fail(wx_res)
-      }
-      if (wx_complete) {
-        wx_complete(wx_res)
-      }
-    }
-  }
-
   onGyroscopeChange(callback) {
     this.fn_global().Gyroscopecallback = callback
   }
 
-  scanItem() {}
+  offGyroscopeChange(callback) {
+    this.fn_global().Gyroscopecallback = callback = {}
+  }
 
-  createWorker() {}
+  /** 性能 */
+  onMemoryWarning(callback) {
+    function _sourceful() {
+      if (!window.performance.memory) throw Error('your browser is not support onMemoryWarning')
+      const res = {}
+      res.level = 1
+      const memoryInfo = window.performance.memory
+      const totalJSHeapSize = memoryInfo.totalJSHeapSize
+      const usedJSHeapSize = memoryInfo.usedJSHeapSize
+      const remainJsHeapSize = totalJSHeapSize - usedJSHeapSize
+      const MEMORY_MODERATE = totalJSHeapSize * 0.15
+      const MEMORY_LOW = totalJSHeapSize * 0.1
+      const MEMORY_CRITICAL = totalJSHeapSize * 0.05
+      if (MEMORY_LOW < remainJsHeapSize <= MEMORY_MODERATE) {
+        res.level = 5
+      } else if (MEMORY_CRITICAL < remainJsHeapSize <= MEMORY_LOW) {
+        res.level = 10
+      } else if (remainJsHeapSize <= MEMORY_CRITICAL) {
+        res.level = 15
+      } else {
+        res.level = ''
+      }
+      callback(res)
+    }
 
+    performance.onresourcetimingbufferful = _sourceful
+  }
+
+  offMemoryWarning(callback) {
+    performance.clearResourceTimings()
+  }
+
+  /** 扫码 */
+  scanCode(options) {
+    const {
+      success,
+      fail,
+      complete
+    } = options
+    options = null
+
+    PROMISE(SUCCESS => {
+      const res = {
+        errMsg: 'scanCode is not support now'
+      }
+
+      SUCCESS(res)
+    }, success, fail, complete)
+  }
+
+  /** 振动 */
+  vibrateShort(options) {
+    const {
+      success,
+      fail,
+      complete
+    } = options
+    options = null
+    PROMISE(SUCCESS => {
+      navigator.vibrate = navigator.vibrate || navigator.webkitVibrate || navigator.mozVibrate || navigator.msVibrate
+      if (!navigator.vibrate) throw Error('your browser is not support vibrateShort')
+      const mobile = navigator.userAgent
+
+      if (mobile.indexOf('Android') > -1 || mobile.indexOf('Linux') > -1) {
+        window.navigator.vibrate(30)
+      } else if (!!mobile.match(/\(i[^;]+;( U;)? CPU.+Mac OS X/)) {
+        window.navigator.vibrate(15)
+      } else {
+        throw Error('Your phone is not smart phone')
+      }
+
+      const res = {
+        errMsg: 'vibrateShort: ok'
+      }
+
+      SUCCESS(res)
+    }, success, fail, complete)
+  }
+
+  vibrateLong(options) {
+    const {
+      success,
+      fail,
+      complete
+    } = options
+    options = null
+    PROMISE(SUCCESS => {
+      navigator.vibrate = navigator.vibrate || navigator.webkitVibrate || navigator.mozVibrate || navigator.msVibrate
+      if (!navigator.vibrate) throw Error('your browser is not support vibrateLong')
+      window.navigator.vibrate(400)
+      const res = {
+        errMsg: 'vibrateShort: ok'
+      }
+      SUCCESS(res)
+    }, success, fail, complete)
+  }
+
+  //////////////////// Worker ////////////////////
+  createWorker(wx_object) {
+    const wx_scriptPath = wx_object.scriptPath
+    const wx_options = wx_object.options
+    wx_object = null
+    const wx_useExperimentalWorker = wx_options.useExperimentalWorker
+    const web_options = {
+      type: ''
+    }
+    if (useExperimentalWorker) {
+      web_options.type = 'module'
+    }
+    const worker = new Worker(wx_scriptPath, web_options)
+    this.fn_global().worker = worker
+    return worker
+  }
+
+  //////////////////// 第三方平台 ////////////////////
   getExtConfig() {}
 
   getExtConfigSync() {}
 
+  //////////////////// WXML ////////////////////
   createSelectorQuery() {
     const xsw_document = document
     xsw_document.select = function (wx_object) {
@@ -3487,13 +3479,155 @@ export default class WX {
     return xsw_document
   }
 
-  // TODO: 未测试
-  // INFO: Network Information API 兼容性很差 (https://caniuse.com/#feat=netinfo) (https://developer.mozilla.org/zh-CN/docs/Web/API/Network_Information_API)
-
   createIntersectionObserver() {}
 
+  //////////////////// 广告 ////////////////////
   createRewardedVideoAd() {}
+
   createInterstitialAd() {}
+
+  //////////////////// 地理位置 ////////////////////
+
+  _mapinit() {
+    const map_sdk = `https://webapi.amap.com/maps?v=1.4.15&key=${config.map.key}`
+    const jsapi = document.createElement('script')
+    jsapi.src = map_sdk
+    document.head.appendChild(jsapi)
+    window.addEventListener('load', () => {
+      const map_ui = '//webapi.amap.com/ui/1.1/main.js?v=1.1.1'
+      const jsuiapi = document.createElement('script')
+      jsuiapi.src = map_ui
+      document.head.appendChild(jsuiapi)
+    })
+    // document.head.removeChild(jsapi)
+  }
+
+  // chooseLocation(options) {
+  //   const {latitude, longitude, success, fail, complete} = options
+  //   PROMISE(SUCCESS => {
+  //     this._mapinit()
+  //     const map_container = document.createElement('div')
+  //     map_container.setAttribute('style', 'height:100vh;width:100vw;')
+  //     map_container.setAttribute('id', 'onekitmap-container')
+  //     document.body.appendChild(map_container)
+  //     const map = new AMap.Map('onekitmap-container', {
+  //       resizeEnable: true,
+  //       zoom: 16,
+  //       center: [longitude, latitude]
+  //     })
+  //     const center_maker = new AMap.Marker({
+  //       position: map.getCenter(),
+  //       draggable: true,
+  //       cursor: 'move',
+  //       // 设置拖拽效果
+  //       raiseOnDrag: true
+  //     })
+
+  //     center_maker.setMap(map)
+  //     map.getCenter(res => {
+  //       console.log(res)
+  //     })
+  //     center_maker.on('dragend', res => {
+  //       const {lng, lat} = res.lnglat
+  //       map.setCenter([lng, lat])
+  //       // AMap.event.addListener(geolocation, 'complete', onComplete => {
+  //         const geoCoder = new AMap.geoCoder({
+  //           city: ''
+  //         })
+
+  //        geoCoder.getAddress([lng, lat], (status, result) => {
+  //          console.log(status, result)
+  //        })
+  //         const resu = {
+  //           errMsg: 'getLocation: ok',
+  //           latitude: onComplete.position.lat,
+  //           longitude: onComplete.position.lng,
+  //           address: '',
+  //           address
+  //         }
+  //         SUCCESS(resu)
+
+  //       // })
+  //     })
+  //     const res = {
+
+  //     }
+  //     SUCCESS(res)
+  //   }, success, fail, complete)
+  // }
+
+  // BackgroundAudioManager
+
+  // LivePusher
+
+  // share
+
+
+
+
+
+
+
+
+
+  // TODO: 未改未测试
+  // HACK: 应该不能通过web方式实现
+  addPhoneContact(wx_object) {
+    const phoneNumber = wx_object.phoneNumber
+    const wx_success = wx_object.success
+    const wx_fail = wx_object.fail
+    const wx_complete = wx_object.complete
+    let wx_res
+    try {
+      const oDiv = document.createElement('div')
+      oDiv.innerHTML = '<a  id=\'biaoDown\' href=\'#\' style=\'display: none\'></a>'
+      console.log(oDiv)
+      document.body.appendChild(oDiv)
+      const Url2 = document.getElementById('biaoDown')
+      Url2.setAttribute('href', 'wtai://wp/ap' + phoneNumber + '')
+      wx_res = {}
+      if (wx_success) {
+        wx_success(wx_res)
+      }
+      if (wx_complete) {
+        wx_complete(wx_res)
+      }
+    } catch (e) {
+      wx_res = {
+        errMsg: e.message,
+      }
+      if (wx_fail) {
+        wx_fail(wx_res)
+      }
+      if (wx_complete) {
+        wx_complete(wx_res)
+      }
+    }
+  }
+
+
+
+  captureScreen() {
+    html2canvas(document.body).then(function (canvas) {
+      // let ctx = cas.getContext('2d')
+      // canvas.width = 100, canvas.height = 100
+      const dataURL = canvas.toDataURL('image/png', 1)
+      if (this.fn_global().Screen_callback) {
+        const wx_res = {
+          image: dataURL,
+        }
+        this.fn_global().Screen_callback(wx_res)
+      }
+    })
+  }
+
+
+  scanItem() {}
+
+
+
+  // TODO: 未测试
+  // INFO: Network Information API 兼容性很差 (https://caniuse.com/#feat=netinfo) (https://developer.mozilla.org/zh-CN/docs/Web/API/Network_Information_API)
 
   color() {} // canvas
   ble() {}
@@ -3502,14 +3636,12 @@ export default class WX {
   livePusher() {}
   mediaContainer() {}
   accountInfo() {}
-  chooseAddress() {}
-  authorize() {}
+  
   chooseInvoiceTitle() {}
   chooseInvoice() {}
-  navigateToMiniProgram() {}
-  navigateBackMiniProgram() {}
+
   UserInfo() {}
-  getUserInfo() {}
+
 
 
 
