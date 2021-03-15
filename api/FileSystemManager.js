@@ -178,7 +178,7 @@ export default class FileSystemManager {
     PROMISE(SUCCESS => {
       if (!filePath) return
       if (filePath.substr(0, 13) === 'wxfile://user' || filePath.substr(0, 13) === 'wxfile://temp') {
-        if(!this.fso.FSO[filePath]) throw Error(`getFileInfo:fail permission denied, mkdirSync ${filePath} at Object.eval [as mkdirSync]`)
+        if (!this.fso.FSO[filePath]) throw Error(`getFileInfo:fail permission denied, mkdirSync ${filePath} at Object.eval [as mkdirSync]`)
         const blob = this.fso.FSO[filePath]
         const digest = TheKit.tempFilepath2digest(filePath)
         const res = {
@@ -197,14 +197,14 @@ export default class FileSystemManager {
 
   mkdirSync(dirPath) {
     try {
-      if(dirPath.substr(0, 13) !== 'wxfile://user') throw Error
-    }catch (e) {
+      if (dirPath.substr(0, 13) !== 'wxfile://user') throw Error
+    } catch (e) {
       throw Error(`mkdirSync:fail permission denied, mkdirSync ${dirPath} at Object.eval [as mkdirSync]`)
     }
-    try{
-      if(this.fso.FSO[dirPath]) throw new Error  
+    try {
+      if (this.fso.FSO[dirPath]) throw new Error
       this.fso.FSO[dirPath] = dirPath
-    }catch (e) {
+    } catch (e) {
       throw new Error(`mkdirSync:fail file already exists, mkdirSync ${dirPath} at Object.eval [as mkdirSync]`)
     }
   }
@@ -216,31 +216,31 @@ export default class FileSystemManager {
     const complete = options.complete
 
     PROMISE(SUCCESS => {
-      if(dirPath.substr(0, 13) !== 'wxfile://user') throw Error(`mkdirSync:fail permission denied, mkdirSync ${dirPath} at Object.eval [as mkdirSync]`)
-      if(this.fso.FSO[dirPath]) throw Error(`mkdirSync:fail file already exists, mkdirSync ${dirPath} at Object.eval [as mkdirSync]`)
+      if (dirPath.substr(0, 13) !== 'wxfile://user') throw Error(`mkdirSync:fail permission denied, mkdirSync ${dirPath} at Object.eval [as mkdirSync]`)
+      if (this.fso.FSO[dirPath]) throw Error(`mkdirSync:fail file already exists, mkdirSync ${dirPath} at Object.eval [as mkdirSync]`)
       this.fso.FSO[dirPath] = dirPath
       const res = {
         errMsg: 'mkdir: ok'
       }
       SUCCESS(res)
-    },success, fail, complete)
+    }, success, fail, complete)
   }
 
   readdirSync(dirPath) {
     try {
-      if(dirPath.substr(0, 13) !== 'wxfile://user') throw Error
+      if (dirPath.substr(0, 13) !== 'wxfile://user') throw Error
       let list_index = [],
-      DIR_ARRAY = []
+        DIR_ARRAY = []
       this.fso.FSO_LIST_.forEach((item, index) => {
-        if(item.filePath.indexOf(dirPath) !== -1) {
+        if (item.filePath.indexOf(dirPath) !== -1) {
           list_index.push(index)
         }
       })
-      for(const i of list_index) {
+      for (const i of list_index) {
         DIR_ARRAY.push(this.fso.FSO_LIST_[i])
       }
       return DIR_ARRAY
-    }catch (e) {
+    } catch (e) {
       throw Error(`readdirSync:fail permission denied, readdirSync ${dirPath} at Object.eval [as mkdirSync]`)
     }
   }
@@ -252,15 +252,15 @@ export default class FileSystemManager {
     const complete = options.complete
 
     PROMISE(SUCCESS => {
-      if(dirPath.substr(0, 13) !== 'wxfile://user') throw Error(`readdirSync:fail permission denied, readdirSync ${dirPath} at Object.eval [as mkdirSync]`)
+      if (dirPath.substr(0, 13) !== 'wxfile://user') throw Error(`readdirSync:fail permission denied, readdirSync ${dirPath} at Object.eval [as mkdirSync]`)
       let list_index = [],
-      DIR_ARRAY = []
+        DIR_ARRAY = []
       this.fso.FSO_LIST_.forEach((item, index) => {
-        if(item.filePath.indexOf(dirPath) !== -1) {
+        if (item.filePath.indexOf(dirPath) !== -1) {
           list_index.push(index)
         }
       })
-      for(const i of list_index) {
+      for (const i of list_index) {
         DIR_ARRAY.push(this.fso.FSO_LIST_[i])
       }
       const res = {
@@ -268,11 +268,11 @@ export default class FileSystemManager {
         files: DIR_ARRAY
       }
       SUCCESS(res)
-    },success, fail, complete)
+    }, success, fail, complete)
   }
 
   readFileSync(filePath, encoding) {
-    if(filePath.substr(0, 13) !== 'wxfile://user' && filePath.substr(0, 13) !== 'wxfile://temp') throw Error(`readdirSync:fail permission denied, readdirSync ${dirPath} at Object.eval [as mkdirSync]`)
+    if (filePath.substr(0, 13) !== 'wxfile://user' && filePath.substr(0, 13) !== 'wxfile://temp') throw Error(`readdirSync:fail permission denied, readdirSync ${dirPath} at Object.eval [as mkdirSync]`)
 
     // try{
     //   let blob
@@ -288,7 +288,7 @@ export default class FileSystemManager {
     //     default:
     //       blob = blob
     //   }
-      console.warn(`[warn]readFileSync: it's not support, you can use the [readFile] instead.`)
+    console.warn(`[warn]readFileSync: it's not support, you can use the [readFile] instead.`)
     //   return res
     // }catch (e) {
     //   throw (e)
@@ -304,50 +304,50 @@ export default class FileSystemManager {
 
     PROMISE(SUCCESS => {
       let blob
-      if(filePath.substr(0, 13) === 'wxfile://user') blob = this.fso.FSO[filePath]
-      if(filePath.substr(0, 13) === 'wxfile://temp') blob = this.fso.TEMP[filePath]
+      if (filePath.substr(0, 13) === 'wxfile://user') blob = this.fso.FSO[filePath]
+      if (filePath.substr(0, 13) === 'wxfile://temp') blob = this.fso.TEMP[filePath]
       // else throw Error (`readdirSync:fail permission denied, readdirSync ${filePath} at Object.eval [as mkdirSync]`)
       let result = {
         errMsg: 'readFile: ok',
         data: ''
       }
-      switch(encoding) {
+      switch (encoding) {
         case 'ascii':
           TheKit.blob2ascii(blob, res => {
             result.data = res
             SUCCESS(result)
           })
-        break
+          break
         case 'base64':
           TheKit.blobToBase64(blob, res => {
             result.data = res
             SUCCESS(result)
           })
-        break
+          break
         case 'binary':
           TheKit.blob2binary(blob, res => {
             result.data = res
             SUCCESS(result)
           })
-        break
+          break
         case 'hex':
           TheKit.blob2hex(blob, res => {
             result.data = res
             SUCCESS(result)
           })
-        break
+          break
         case 'latin1':
           TheKit.blob2hex(blob, res => {
             result.data = res
             SUCCESS(result)
           })
-        break
-        case 'utf-8' || 'utf8' :
+          break
+        case 'utf-8' || 'utf8':
           TheKit.blob2string(blob, res => {
             result.data = res
             SUCCESS(result)
           })
-        break
+          break
         default:
           TheKit.blob2arrbuffer(blob, res => {
             result.data = res
@@ -355,17 +355,17 @@ export default class FileSystemManager {
           })
       }
 
-    },success, fail, complete)
+    }, success, fail, complete)
   }
 
   renameSync(oldPath, newPath) {
-    if(oldPath.substr(0, 13) !== 'wxfile://user') throw Error(`renameSync:fail permission denied, readdirSync ${oldPath} at Object.eval [as mkdirSync]`)
-    if(newPath.substr(0, 13) !== 'wxfile://user') throw Error(`renameSync:fail permission denied, readdirSync ${newPath} at Object.eval [as mkdirSync]`)
-    try{
-      if(this.fso.FSO[newPath]) throw Error(`renameSync:fail filename already exists, mkdirSync ${dirPath} at Object.eval [as mkdirSync]`)
+    if (oldPath.substr(0, 13) !== 'wxfile://user') throw Error(`renameSync:fail permission denied, readdirSync ${oldPath} at Object.eval [as mkdirSync]`)
+    if (newPath.substr(0, 13) !== 'wxfile://user') throw Error(`renameSync:fail permission denied, readdirSync ${newPath} at Object.eval [as mkdirSync]`)
+    try {
+      if (this.fso.FSO[newPath]) throw Error(`renameSync:fail filename already exists, mkdirSync ${dirPath} at Object.eval [as mkdirSync]`)
       this.fso.FSO[newPath] = this.fso.FSO[oldPath]
       this.fso.FSO[oldPath] = null
-    }catch(e) {
+    } catch (e) {
       throw new Error(e)
     }
   }
@@ -378,24 +378,24 @@ export default class FileSystemManager {
     const complete = options.complete
 
     PROMISE(SUCCESS => {
-      if(oldPath.substr(0, 13) !== 'wxfile://user') throw Error(`renameSync:fail permission denied, readdirSync ${oldPath} at Object.eval [as mkdirSync]`)
-      if(newPath.substr(0, 13) !== 'wxfile://user') throw Error(`renameSync:fail permission denied, readdirSync ${newPath} at Object.eval [as mkdirSync]`)
-      if(this.fso.FSO[newPath]) throw Error(`renameSync:fail filename already exists, mkdirSync ${dirPath} at Object.eval [as mkdirSync]`)
+      if (oldPath.substr(0, 13) !== 'wxfile://user') throw Error(`renameSync:fail permission denied, readdirSync ${oldPath} at Object.eval [as mkdirSync]`)
+      if (newPath.substr(0, 13) !== 'wxfile://user') throw Error(`renameSync:fail permission denied, readdirSync ${newPath} at Object.eval [as mkdirSync]`)
+      if (this.fso.FSO[newPath]) throw Error(`renameSync:fail filename already exists, mkdirSync ${dirPath} at Object.eval [as mkdirSync]`)
       const res = {
         errMsg: 'rename: ok'
       }
       this.fso.FSO[newPath] = this.fso.FSO[oldPath]
       delete this.fso.FSO[oldPath]
       SUCCESS(res)
-    },success, fail, complete)
+    }, success, fail, complete)
   }
 
   rmdirSync(dirPath) {
-    if(!filePath) throw new Error('invoke error: Error: path is invalid }')
+    if (!filePath) throw new Error('invoke error: Error: path is invalid }')
     try {
-      if(dirPath.substr(0, 13) !== 'wxfile://user') throw Error(`mkdirSync:fail permission denied, mkdirSync ${dirPath}`)
+      if (dirPath.substr(0, 13) !== 'wxfile://user') throw Error(`mkdirSync:fail permission denied, mkdirSync ${dirPath}`)
       delete this.fso.FSO[dirPath]
-    }catch(e) {
+    } catch (e) {
       throw new Error(e)
     }
   }
@@ -406,23 +406,23 @@ export default class FileSystemManager {
     const fail = options.fail
     const complete = options.complete
     options = null
-    if(!filePath) throw new Error('invoke error: Error: path is invalid }')
+    if (!filePath) throw new Error('invoke error: Error: path is invalid }')
     PROMISE(SUCCESS => {
-      if(dirPath.substr(0, 13) !== 'wxfile://user') throw Error(`mkdirSync:fail permission denied, mkdirSync ${dirPath}`)
+      if (dirPath.substr(0, 13) !== 'wxfile://user') throw Error(`mkdirSync:fail permission denied, mkdirSync ${dirPath}`)
       delete this.fso.FSO[dirPath]
       const res = {
         errMsg: 'rmdir: ok'
       }
       SUCCESS(res)
-    },success, fail, complete)
+    }, success, fail, complete)
   }
 
   statSync(path) {
-    if(!path) throw new Error('invoke error: Error: path is invalid }')
-    if(!this.fso.FSO[path] && !this.fso.TEMP[path]) throw new Error(`mkdirSync:fail permission denied, mkdirSync ${path}`) 
+    if (!path) throw new Error('invoke error: Error: path is invalid }')
+    if (!this.fso.FSO[path] && !this.fso.TEMP[path]) throw new Error(`mkdirSync:fail permission denied, mkdirSync ${path}`)
     let blob
-    if(path.substr(0, 13) === 'wxfile://user') blob = this.fso.FSO[path]
-    if(path.substr(0, 13) === 'wxfile://temp') blob = this.fso.TEMP[path]
+    if (path.substr(0, 13) === 'wxfile://user') blob = this.fso.FSO[path]
+    if (path.substr(0, 13) === 'wxfile://temp') blob = this.fso.TEMP[path]
 
     const e = {
       mode: 33206,
@@ -434,12 +434,50 @@ export default class FileSystemManager {
     return new State(e)
   }
 
+  stat(options) {
+    const path = options.path
+    const recursive = options.recursive
+    const success = options.success
+    const fail = options.fail
+    const complete = options.complete
+    options = null
+
+    PROMISE(SUCCESS => {
+      if (!path) throw new Error('invoke error: Error: path is invalid }')
+      if (!recursive) {
+        if (!this.fso.FSO[path] && !this.fso.TEMP[path]) throw new Error(`mkdirSync:fail permission denied, mkdirSync ${path}`)
+        let blob
+        if (path.substr(0, 13) === 'wxfile://user') blob = this.fso.FSO[path]
+        if (path.substr(0, 13) === 'wxfile://temp') blob = this.fso.TEMP[path]
+
+        const e = {
+          mode: 33206,
+          size: blob.size,
+          lastAccessedTime: this.fso.FSO[`${path}_current_time`] || this.fso.TEMP[`${path}_current_time`] || new Date().getTime(),
+          lastModifiedTime: this.fso.FSO[`${path}_current_time`] || this.fso.TEMP[`${path}_current_time`] || new Date().getTime(),
+          path
+        }
+        const wx_res = {
+          errMsg: 'cloud.callFunction:ok',
+          result: {
+            errMsg: '',
+            stats: {
+              updated: new State(e)
+            }
+          }
+        }
+        SUCCESS(wx_res)
+      }
+      return
+    }, success, fail, complete)
+  }
+  
   unlinkSync(filePath) {
-    if(!filePath) throw new Error(`invoke error: Error: path is invalid }`)
+    if (!filePath) throw new Error(`invoke error: Error: path is invalid }`)
     try {
-      if(!this.fso.FSO[filePath]) throw new Error(`unlinkSync:fail no such file or directory, unlinkSync ${filePath}`)
+      if (!this.fso.FSO[filePath]) throw new Error(`unlinkSync:fail no such file or directory, unlinkSync ${filePath}`)
       delete this.fso.FSO[filePath]
-    }catch(e) {
+    } catch (e) {
       throw Error(e)
     }
   }
@@ -450,15 +488,15 @@ export default class FileSystemManager {
     const fail = options.fail
     const complete = options.complete
     options = null
-    if(!filePath) throw new Error(`invoke error: Error: path is invalid }`)
+    if (!filePath) throw new Error(`invoke error: Error: path is invalid }`)
     PROMISE(SUCCESS => {
-      if(!this.fso.FSO[filePath]) throw new Error(`unlinkSync:fail no such file or directory, unlinkSync ${filePath}`)
+      if (!this.fso.FSO[filePath]) throw new Error(`unlinkSync:fail no such file or directory, unlinkSync ${filePath}`)
       delete this.fso.FSO[filePath]
       const res = {
         errMsg: 'unlink: ok'
       }
       SUCCESS(res)
-    },success, fail, complete)
+    }, success, fail, complete)
   }
 
   unzip(options) {
@@ -469,8 +507,8 @@ export default class FileSystemManager {
     const complete = options.complete
 
     PROMISE(SUCCESS => {
-      if(targetPath.substr(0, 13) !== 'wxfile://user') throw Error(`uzip: fail permission denied, mkdirSync ${targetPath}`)
-      if(!this.fso.TEMP[zipFilePath]) throw Error(`Your zip file is not defined`)
+      if (targetPath.substr(0, 13) !== 'wxfile://user') throw Error(`uzip: fail permission denied, mkdirSync ${targetPath}`)
+      if (!this.fso.TEMP[zipFilePath]) throw Error(`Your zip file is not defined`)
       const blob = this.fso.TEMP[zipFilePath]
       const JSZIP = new JsZip()
 
@@ -489,9 +527,9 @@ export default class FileSystemManager {
   }
 
   writeFileSync(filePath, data, encoding) {
-    if(!filePath) throw new Error('invoke error: Error: path is invalid }')
-    if(filePath.substr(0, 13) !== 'wxfile://user') throw Error(`renameSync:fail permission denied, readdirSync ${filePath} at Object.eval [as mkdirSync]`)
-    if(!data) throw Error('invoke error: Error: data is invalid }')
+    if (!filePath) throw new Error('invoke error: Error: path is invalid }')
+    if (filePath.substr(0, 13) !== 'wxfile://user') throw Error(`renameSync:fail permission denied, readdirSync ${filePath} at Object.eval [as mkdirSync]`)
+    if (!data) throw Error('invoke error: Error: data is invalid }')
     console.warn(`Please use [writeFile] instead`)
   }
 
@@ -502,16 +540,16 @@ export default class FileSystemManager {
     const success = options.success
     const fail = options.fail
     const complete = options.complete
-    if(encoding === 'ascii' || encoding === 'utf-8' || encoding === 'utf8') {
+    if (encoding === 'ascii' || encoding === 'utf-8' || encoding === 'utf8') {
       encoding = 'string'
-    }else if(encoding === 'binary' || encoding === 'hex'){
+    } else if (encoding === 'binary' || encoding === 'hex') {
       encoding === 'blob'
-    }else if(!encoding){
+    } else if (!encoding) {
       encoding = 'arraybuffer'
     }
     options = null
     PROMISE(SUCCESS => {
-      if(!filePath) throw Error(`fail no such file or directory, open ${filePath}`)
+      if (!filePath) throw Error(`fail no such file or directory, open ${filePath}`)
       const JSZIP = new JsZip()
       const filename = filePath.substr(filePath.lastIndexOf('/') + 1)
       JSZIP.file(filename, data)

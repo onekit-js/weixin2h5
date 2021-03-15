@@ -1,6 +1,7 @@
 import html2canvas from 'html2canvas'
 import vconsole from 'vconsole'
 import Animation from './api/Animation'
+import RealtimeLogManager from './api/RealtimeLogManager'
 import LogManager from './api/LogManager'
 import RequestTask from './api/RequestTask'
 import SocketTask from './api/SocketTask'
@@ -32,11 +33,15 @@ import './js/PrevewImage'
 import config from './config'
 import AudioContext from './api/AudioContext'
 import MediaRecorder from './api/MediaRecorder'
+import UDPSocket from './api/UDPSocket'
+import NFCAdapter from './api/NFCAdapter'
 
 export default class WX {
   constructor(fn_global) {
     this.fn_global = fn_global
   }
+
+  /////////////////////////基础////////////////////////
   /** 基础 */
   canIUse() {
     return true
@@ -49,6 +54,7 @@ export default class WX {
   arrayBufferToBase64(arrayBuffer) {
     return STRING.arrayBufferToBase64(arrayBuffer)
   }
+
   /** 更新 */
   updateWeChatApp(wx_object) {
     const wx_success = wx_object.success || ''
@@ -83,10 +89,7 @@ export default class WX {
     return new UpdateManager()
   }
 
-  UpdateManager() {
-
-  }
-  /** 生命周期 */
+  /** 小程序生命周期 */
   getLaunchOptionsSync() {
     return this.fn_global().OPTION
   }
@@ -127,8 +130,8 @@ export default class WX {
   canIPutStuffOverComponent() {
     return true
   }
-  /** 应用级事件 */
 
+  /** 应用级事件 */
   onUnhandledRejection(wx_callback) {
     this.fn_global().onUnhandledRejection = wx_callback
   }
@@ -192,17 +195,6 @@ export default class WX {
   offAppHide() {
     this.fn_global().onAppHide = null
   }
-  /** 环境变量 */
-
-  get env() {
-    const VERSION = 'production'
-    const USER_DATA_PATH = 'wxfile://user'
-    const obj = {
-      VERSION,
-      USER_DATA_PATH,
-    }
-    return Object(obj)
-  }
 
   /** 调试 */
   setEnableDebug(wx_object) {
@@ -234,7 +226,7 @@ export default class WX {
   }
 
   getRealtimeLogManager() {
-    return new LogManager()
+    return new RealtimeLogManager()
   }
 
   getLogManager(wx_object) {
@@ -245,14 +237,6 @@ export default class WX {
     } else {
       return false
     }
-  }
-
-  LogManager() {
-    return new LogManager()
-  }
-
-  RealtimeLogManager() {
-    return new LogManager()
   }
 
 
@@ -283,7 +267,19 @@ export default class WX {
     return animation
   }
 
-  /** 网络 */
+  /** 环境变量 */
+  get env() {
+    const VERSION = 'production'
+    const USER_DATA_PATH = 'wxfile://user'
+    const obj = {
+      VERSION,
+      USER_DATA_PATH,
+    }
+    return Object(obj)
+  }
+
+  // /////////////////////////网络/////////////////////////
+  /** 发起请求 */
   request(wx_object) {
     const url = wx_object.url
     const data = wx_object.data
@@ -333,7 +329,6 @@ export default class WX {
     setTimeout(() => {
       axios_instance({
         url: url,
-
       }).then((response) => {
         const wx_res = {
           cookies: response.cookies || [],
@@ -361,7 +356,7 @@ export default class WX {
     return requestTask
   }
 
-
+  /** 下载 */
   downloadFile(wx_object) {
     const wx_url = wx_object.url
     const wx_success = wx_object.success
@@ -408,7 +403,7 @@ export default class WX {
     return downloadTask
   }
 
-
+  /** 上传 */
   uploadFile(wx_object) {
     const url = wx_object.url
     const filePath = wx_object.filePath
@@ -480,43 +475,7 @@ export default class WX {
     return uploadTask
   }
 
-  connectSocket(wx_object) {
-    const wx_url = wx_object.url
-    const wx_protocols = wx_object.protocols
-    const wx_success = wx_object.success
-    const wx_fail = wx_object.fail
-    const wx_complete = wx_object.complete
-    wx_object = null
-    return PROMISE((SUCCESS) => {
-      const vue_socket = new WebSocket(wx_url, wx_protocols)
-      let socketCount = this.socketCount || 0
-      socketCount++
-      this.socketCount = socketCount
-      if (this.socketCount === 5) {
-        return
-      }
-      const wx_res = {
-        errMsg: 'connectSocket:ok',
-        socketTaskId: this.socketCount,
-      }
-      const wx_socket = new SocketTask(vue_socket)
-      SUCCESS(wx_res)
-      return wx_socket
-    }, wx_success, wx_fail, wx_complete)
-  }
-
-  onSocketOpen(callback) {
-    if (!this.fn_global()._socket) {
-      return false
-    }
-
-    this.fn_global()._socket.addEventListener('open', (event) => {
-      if (callback) {
-        return callback(event)
-      }
-    })
-  }
-
+  /** webSocket */
   sendSocketMessage(wx_object) {
     const wx_data = wx_object.data
     const wx_success = wx_object.success
@@ -531,6 +490,18 @@ export default class WX {
       this.fn_global()._socket.send(wx_data)
       SUCCESS()
     }, wx_success, wx_fail, wx_complete)
+  }
+
+  onSocketOpen(callback) {
+    if (!this.fn_global()._socket) {
+      return false
+    }
+
+    this.fn_global()._socket.addEventListener('open', (event) => {
+      if (callback) {
+        return callback(event)
+      }
+    })
   }
 
   onSocketMessage(callback) {
@@ -573,10 +544,36 @@ export default class WX {
     })
   }
 
+  connectSocket(wx_object) {
+    const wx_url = wx_object.url
+    const wx_protocols = wx_object.protocols
+    const wx_success = wx_object.success
+    const wx_fail = wx_object.fail
+    const wx_complete = wx_object.complete
+    wx_object = null
+    return PROMISE((SUCCESS) => {
+      const vue_socket = new WebSocket(wx_url, wx_protocols)
+      let socketCount = this.socketCount || 0
+      socketCount++
+      this.socketCount = socketCount
+      if (this.socketCount === 5) {
+        return
+      }
+      const wx_res = {
+        errMsg: 'connectSocket:ok',
+        socketTaskId: this.socketCount,
+      }
+      const wx_socket = new SocketTask(vue_socket)
+      SUCCESS(wx_res)
+      return wx_socket
+    }, wx_success, wx_fail, wx_complete)
+  }
+
   closeSocket() {
     this.fn_global()._socketTask.close()
   }
 
+  /** mDNS */
   offLocalServiceResolveFail() {
     console.error('HTML5 is not support mDNS!!')
   }
@@ -608,10 +605,12 @@ export default class WX {
     console.error('HTML5 is not support mDNS!!')
   }
 
+  /** UDP */
   createUDPSocket() {
-    console.error('HTML5 is not support UDP!!')
+    return new UDPSocket()
   }
 
+  ////////////////////数据缓存//////////////////
   setStorageSync(key, value) {
     try {
       localStorage.setItem(key, value)
@@ -645,8 +644,65 @@ export default class WX {
     }, wx_success, wx_fail, wx_complete)
   }
 
+  removeStorageSync(key) {
+    localStorage.removeItem(key)
+  }
+
+  removeStorage(wx_object) {
+    const key = wx_object.key
+    const wx_success = wx_object.success
+    const wx_fail = wx_object.fail
+    const wx_complete = wx_object.complete
+    wx_object = null
+    const res = {}
+
+    PROMISE((SUCCESS) => {
+      this.removeStorageSync(key)
+      res.errMsg = 'removeStorage:ok'
+      SUCCESS(res)
+    }, wx_success, wx_fail, wx_complete)
+  }
+
   getStorageSync(key) {
     return localStorage.getItem(key)
+  }
+
+  getStorageInfoSync() {
+    let wx_res
+    try {
+      const keysArray = new Array()
+      for (let i = 0; i < localStorage.length; i++) {
+        const getKey = localStorage.key(i)
+        keysArray.push(getKey)
+      }
+      let sizeStore = 0
+      if (localStorage) {
+        for (const item of Object.keys(localStorage)) {
+          sizeStore += localStorage.getItem(item).length
+        }
+      }
+      wx_res = {
+        keys: keysArray,
+        currentSize: Math.ceil((sizeStore / 1024).toFixed(2)),
+        limitSize: '5110',
+      }
+      return wx_res
+    } catch (e) {
+      throw new Error(e.message)
+    }
+  }
+
+  getStorageInfo(wx_object) {
+    const wx_success = wx_object.success
+    const wx_fail = wx_object.fail
+    const wx_complete = wx_object.complete
+    wx_object = null
+
+    PROMISE((SUCCESS) => {
+      const wx_res = this.getStorageInfoSync()
+      wx_res['errMsg'] = 'getStorageInfo:ok'
+      SUCCESS(wx_res)
+    }, wx_success, wx_fail, wx_complete)
   }
 
   getStorage(wx_object) {
@@ -677,24 +733,6 @@ export default class WX {
     }, wx_success, wx_fail, wx_complete)
   }
 
-  removeStorageSync(key) {
-    localStorage.removeItem(key)
-  }
-
-  removeStorage(wx_object) {
-    const key = wx_object.key
-    const wx_success = wx_object.success
-    const wx_fail = wx_object.fail
-    const wx_complete = wx_object.complete
-    wx_object = null
-    const res = {}
-
-    PROMISE((SUCCESS) => {
-      this.removeStorageSync(key)
-      res.errMsg = 'removeStorage:ok'
-      SUCCESS(res)
-    }, wx_success, wx_fail, wx_complete)
-  }
 
   clearStorageSync() {
     localStorage.clear()
@@ -713,44 +751,8 @@ export default class WX {
     }, wx_success, wx_fail, wx_complete)
   }
 
-  getStorageInfo(wx_object) {
-    const wx_success = wx_object.success
-    const wx_fail = wx_object.fail
-    const wx_complete = wx_object.complete
-    wx_object = null
 
-    PROMISE((SUCCESS) => {
-      const wx_res = this.getStorageInfoSync()
-      wx_res['errMsg'] = 'getStorageInfo:ok'
-      SUCCESS(wx_res)
-    }, wx_success, wx_fail, wx_complete)
-  }
-
-  getStorageInfoSync() {
-    let wx_res
-    try {
-      const keysArray = new Array()
-      for (let i = 0; i < localStorage.length; i++) {
-        const getKey = localStorage.key(i)
-        keysArray.push(getKey)
-      }
-      let sizeStore = 0
-      if (localStorage) {
-        for (const item of Object.keys(localStorage)) {
-          sizeStore += localStorage.getItem(item).length
-        }
-      }
-      wx_res = {
-        keys: keysArray,
-        currentSize: Math.ceil((sizeStore / 1024).toFixed(2)),
-        limitSize: '5110',
-      }
-      return wx_res
-    } catch (e) {
-      throw new Error(e.message)
-    }
-  }
-
+  /** 周期性更新 */
   setBackgroundFetchToken() {
     console.warn('html5 is not support setBackgroundFetchToken')
   }
@@ -764,6 +766,8 @@ export default class WX {
     console.warn('html5 is not support getBackgroundFetchData')
   }
 
+  ///////////////////////媒体/////////////////////////////
+  /** 图片 */
   saveImageToPhotosAlbum(wx_object) {
     const wx_filePath = wx_object.filePath
     const wx_success = wx_object.success
@@ -779,6 +783,64 @@ export default class WX {
       }
       SUCCESS(res)
     }, wx_success, wx_fail, wx_complete)
+  }
+
+  previewImage(wx_object) {
+    const wx_urls = wx_object.urls
+    const wx_current = wx_object.current
+    const wx_success = wx_object.success
+    const wx_fail = wx_object.fail
+    const wx_complete = wx_object.complete
+    PROMISE((SUCCESS) => {
+      if (wx_urls[0].startsWith('wxfile://tmp_onekit_')) {
+        const blobs = []
+        for (const i in wx_urls) {
+          blobs.push(this.fn_global().TEMP[wx_urls[i]])
+        }
+        const vue_current = this.fn_global().TEMP[wx_current]
+        if (vue_current === undefined) {
+          const urls = []
+          for (const i in blobs) {
+            TheKit.blobToBase64(blobs[i], (res) => {
+              urls.push(res)
+              const obj = {
+                urls: urls,
+                current: urls[0],
+              }
+              // eslint-disable-next-line no-undef
+              _preview_.start(obj)
+            })
+          }
+        }
+
+        TheKit.blobToBase64(vue_current, (res) => {
+          const url = res
+          const urls = []
+          for (const i in blobs) {
+            TheKit.blobToBase64(blobs[i], (res) => {
+              urls.push(res)
+              const obj = {
+                urls: urls,
+                current: url,
+              }
+              // eslint-disable-next-line no-undef
+              _preview_.start(obj)
+            })
+          }
+        })
+      } else {
+        const obj = {
+          urls: wx_urls,
+          current: wx_current,
+        }
+        // eslint-disable-next-line no-undef
+        _preview_.start(obj)
+      }
+      const res = {
+        errMsg: 'previewImage: ok',
+      }
+      SUCCESS(res)
+    }, wx_success, wx_complete, wx_fail)
   }
 
   getImageInfo(wx_object) {
@@ -1007,62 +1069,27 @@ export default class WX {
     }, wx_success, wx_fail, wx_complete)
   }
 
-  previewImage(wx_object) {
-    const wx_urls = wx_object.urls
-    const wx_current = wx_object.current
-    const wx_success = wx_object.success
-    const wx_fail = wx_object.fail
-    const wx_complete = wx_object.complete
-    PROMISE((SUCCESS) => {
-      if (wx_urls[0].startsWith('wxfile://tmp_onekit_')) {
-        const blobs = []
-        for (const i in wx_urls) {
-          blobs.push(this.fn_global().TEMP[wx_urls[i]])
-        }
-        const vue_current = this.fn_global().TEMP[wx_current]
-        if (vue_current === undefined) {
-          const urls = []
-          for (const i in blobs) {
-            TheKit.blobToBase64(blobs[i], (res) => {
-              urls.push(res)
-              const obj = {
-                urls: urls,
-                current: urls[0],
-              }
-              // eslint-disable-next-line no-undef
-              _preview_.start(obj)
-            })
-          }
-        }
+  /** 视频 */
+  saveVideoToPhotosAlbum(options) {
 
-        TheKit.blobToBase64(vue_current, (res) => {
-          const url = res
-          const urls = []
-          for (const i in blobs) {
-            TheKit.blobToBase64(blobs[i], (res) => {
-              urls.push(res)
-              const obj = {
-                urls: urls,
-                current: url,
-              }
-              // eslint-disable-next-line no-undef
-              _preview_.start(obj)
-            })
-          }
-        })
-      } else {
-        const obj = {
-          urls: wx_urls,
-          current: wx_current,
-        }
-        // eslint-disable-next-line no-undef
-        _preview_.start(obj)
-      }
+    const filePath = options.filePath
+    const success = options.success
+    const fail = options.fail
+    const complete = options.complete
+
+    PROMISE((SUCCESS) => {
+      const xsw_A = document.createElement('a')
+      xsw_A.innerHTML = '<button>保存</button>'
+      xsw_A.setAttribute('id', 'xswAH')
+      xsw_A.setAttribute('download', 'download')
+      xsw_A.setAttribute('href', filePath)
+      xsw_A.setAttribute('target', "view-window")
+      xsw_A.click()
       const res = {
-        errMsg: 'previewImage: ok',
+        errMsg: 'saveVideoToPhotosAlbum:ok'
       }
       SUCCESS(res)
-    }, wx_success, wx_complete, wx_fail)
+    }, success, fail, complete)
   }
 
   getVideoInfo(wx_object) {
@@ -1107,8 +1134,36 @@ export default class WX {
     }, wx_success, wx_fail, wx_complete)
   }
 
+  createVideoContext(id, component) {
+    const videoDom = document.getElementById(id)
+    if (this.fn_global().videoContext) {
+      return this.fn_global().videoContext
+    } else {
+      const videoContext = new VideoContext(videoDom)
+      this.fn_global().VideoContext = videoContext
+      return videoContext
+    }
+  }
+
   compressVideo() {
     console.error('html5 is not support!')
+  }
+
+  chooseVideo(options) {
+    const sourceType = options.sourceType || ['album', 'camara']
+    // const wx_compressed = wx_Object.compressed || true  // HTML5 is not support
+    // const wx_maxDuration = wx_object.maxDuration || 60  // HTML5 is not support
+    const camera = options.camera || 'back'
+    const success = options.success
+    const fail = options.fail
+    const complete = options.complete
+
+    options = null
+    PROMISE((SUCCESS) => {
+      const html_sourceType = sourceType
+      const html_sorts = 'vedio'
+      this._chooseMedia(SUCCESS, html_sourceType, html_sorts, camera)
+    }, success, fail, complete)
   }
 
   chooseMedia(wx_object) {
@@ -1309,74 +1364,19 @@ export default class WX {
     })
   }
 
-  //////////////////// 录音 //////////////////////////
+  /** 音频 */
+  stopVoice() {}
 
-  startRecord() {
-    //  let wx_success = wx_object.success
-    // let wx_fail = wx_object.success
-    //  let wx_complete = wx_object.success
-    // ////////////////////////////
-    try {
-      this.startRecord()
-    } catch (error) {
-      const wx_res = {}
-      wx_res.errMsg = error.message
-      console.log(wx_res)
-    }
-  }
+  setInnerAudioOption() {}
 
-  stopRecord(wx_object) {
-    const wx_success = wx_object.success
-    const wx_fail = wx_object.success
-    const wx_complete = wx_object.success
-    // ////////////////////////////
-    const wx_res = {}
-    // let localId
-    this.stopRecord({
-      success: function (res) {
-        if (wx_success) {
-          wx_res.errMsg = 'startRecord:ok'
-          wx_res.tempFilePath = res.localId // 小程序中会返回录音文件的临时存放路径 tempFilePath ，JS-SDK中会返回录音文件的 localId ，所以这里直接将 localId 赋值给 tempFilePath，让用户获取 tempFilePath 来播放录音。
-          wx_success(wx_res)
-        }
-      },
-      fail: function (wx_res) {
-        wx_fail(wx_res)
-      },
-      complete: function (wx_res) {
-        if (wx_complete) {
-          wx_complete(wx_res)
-        }
-      },
-    })
-  }
+  playVoice() {}
 
-  getRecorderManager() {
-    navigator.getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia || navigator.msGetUserMedia
-    if (navigator.getUserMedia) {
-      if (this.fn_global().recorderManager) {
-        return this.fn_global().recorderManager;
-      } else {
-        const recorderManager = new RecorderManager()
-        this.fn_global().recorderManager = recorderManager
-        return recorderManager
-      }
-    }
-    throw 'getRecorderManager: Your browser version is too low!'
-  }
+  pauseVoice() {}
 
-  //////////////////// 音频 /////////////////////////
+  getAvailableAudioSources() {}
 
-  getBackgroundAudioManager() {
-    const bgAudiocontext = new Audio()
-    bgAudiocontext.crossOrigin = 'anonymous'
-    if (this.fn_global().backgroundManager) {
-      return this.fn_global().backgroundManager
-    } else {
-      const backgroundManager = new BackgroundManager(bgAudiocontext)
-      this.fn_global().backgroundManager = backgroundManager
-      return backgroundManager
-    }
+  createMediaAudioPlayer() {
+
   }
 
   createInnerAudioContext() {
@@ -1403,12 +1403,302 @@ export default class WX {
     }
   }
 
-  createMediaAudioPlayer() {
 
+  /** 背景音频 */
+  stopBackgroundAudio(wx_object) {
+    const xsw_audio = document.getElementById('xsw_autoplayId')
+    if (!wx_object) {
+      if (xsw_audio) {
+        xsw_audio.pause()
+        xsw_audio.currentTime = 0
+      } else {
+        throw new Error('请先播放音乐！')
+      }
+    } else {
+      const wx_success = wx_object.success
+      const wx_fail = wx_object.fail
+      const wx_complete = wx_object.complete
+      let wx_res
+      try {
+        if (xsw_audio) {
+          xsw_audio.pause()
+          wx_res = {
+            pauseBackgroundAudio: 'ok',
+          }
+          if (wx_success) {
+            wx_success(wx_res)
+          }
+          if (wx_complete) {
+            wx_complete(wx_res)
+          }
+        } else {
+          throw new Error('请先播放音乐！')
+        }
+      } catch (e) {
+        wx_res = {
+          errMsg: e.message,
+        }
+        if (wx_fail) {
+          wx_fail(wx_res)
+        }
+        if (wx_complete) {
+          wx_complete(wx_res)
+        }
+      }
+    }
   }
 
-  //////////////////// 实时音视频 ////////////////////
+  seekBackgroundAudio(wx_object) {
+    const position = wx_object.position
+    const wx_success = wx_object.success
+    const wx_fail = wx_object.fail
+    const wx_complete = wx_object.complete
+    let wx_res
+    const xsw_audio = document.getElementById('xsw_autoplayId')
+    try {
+      if (xsw_audio) {
+        xsw_audio.currentTime = position
+        wx_res = {
+          seekBackgroundAudio: 'ok',
+        }
+        if (wx_success) {
+          wx_success(wx_res)
+        }
+        if (wx_complete) {
+          wx_complete(wx_res)
+        }
+      } else {
+        throw new Error('请先播放音乐！')
+      }
+    } catch (e) {
+      wx_res = {
+        errMsg: e.message,
+      }
+      if (wx_fail) {
+        wx_fail(wx_res)
+      }
+      if (wx_complete) {
+        wx_complete(wx_res)
+      }
+    }
+  }
 
+  playBackgroundAudio(wx_object) {
+    const dataUrl = wx_object.dataUrl
+    const title = wx_object.title
+    const coverImgUrl = wx_object.coverImgUrl
+    const wx_success = wx_object.success
+    const wx_fail = wx_object.fail
+    const wx_complete = wx_object.complete
+    let wx_res
+    try {
+      let wrap
+      if (title || coverImgUrl) {
+        wrap = document.createElement('div')
+        wrap.innerHTML =
+          '<div style="width: 80%background-color: #444margin-left: 10%"><img src="' +
+          coverImgUrl +
+          '" style="width: 80pxheight: 80pxdisplay: inline-blockpadding-left: 20pxmargin-top: 10px"><div style="display: inline-blockpadding-left: 20pxcolor: #fff">' +
+          title +
+          '</div></div><audio src="" id="xsw_autoplayId"  style="width: 80%margin-left: 10%"   controls="controls"  ></audio>'
+        const firstT = document.body.firstChild
+        document.body.insertBefore(wrap, firstT)
+      } else {
+        wrap = document.createElement('audio')
+        wrap.setAttribute('id', 'xsw_autoplayId')
+        wrap.setAttribute('autoplay', 'autoplay')
+        wrap.setAttribute('style', 'visibility: hidden')
+        const first = document.body.firstChild
+        document.body.insertBefore(wrap, first)
+      }
+      const xsw_audio = document.getElementById('xsw_autoplayId')
+      xsw_audio.src = dataUrl
+      // xsw_audio.controls=true
+      xsw_audio.autoplay = true
+      wx_res = {
+        playBackgroundAudio: 'ok',
+      }
+      if (wx_success) {
+        wx_success(wx_res)
+      }
+      if (wx_complete) {
+        wx_complete(wx_res)
+      }
+    } catch (e) {
+      wx_res = {
+        errMsg: e.message,
+      }
+      if (wx_fail) {
+        wx_fail(wx_res)
+      }
+      if (wx_complete) {
+        wx_complete(wx_res)
+      }
+    }
+  }
+
+  pauseBackgroundAudio(wx_object) {
+    const xsw_audio = document.getElementById('xsw_autoplayId')
+    if (!wx_object) {
+      if (xsw_audio) {
+        xsw_audio.pause()
+      } else {
+        throw new Error('请先播放音乐！')
+      }
+    } else {
+      const wx_success = wx_object.success
+      const wx_fail = wx_object.fail
+      const wx_complete = wx_object.complete
+      let wx_res
+      try {
+        if (xsw_audio) {
+          xsw_audio.pause()
+          wx_res = {
+            pauseBackgroundAudio: 'ok',
+          }
+          if (wx_success) {
+            wx_success(wx_res)
+          }
+          if (wx_complete) {
+            wx_complete(wx_res)
+          }
+        } else {
+          throw new Error('请先播放音乐！')
+        }
+      } catch (e) {
+        wx_res = {
+          errMsg: e.message,
+        }
+        if (wx_fail) {
+          wx_fail(wx_res)
+        }
+        if (wx_complete) {
+          wx_complete(wx_res)
+        }
+      }
+    }
+  }
+
+  onBackgroundAudioStop(callback) {
+    let audioStatus
+    const zzz = setInterval(function () {
+      const xsw_audio = document.getElementById('xsw_autoplayId')
+      if (xsw_audio) {
+        xsw_audio.addEventListener('pause', function () {
+          if (xsw_audio.currentTime == 0) {
+            audioStatus = '2'
+          } else {
+            audioStatus = '0'
+          }
+        })
+        const panStatus = '2'
+        if (panStatus == audioStatus) {
+          callback(audioStatus)
+          clearInterval(zzz)
+        }
+      }
+    }, 1000)
+  }
+
+  onBackgroundAudioPlay(callback) {
+    setTimeout(function () {
+      const xsw_audio = document.getElementById('xsw_autoplayId')
+      if (xsw_audio) {
+        xsw_audio.addEventListener('playing', function () {
+          const audioStatus = '1'
+          callback(audioStatus)
+        })
+      }
+    })
+  }
+
+  onBackgroundAudioPause(callback) {
+    let audioStatus
+    const zzz = setInterval(function () {
+      const xsw_audio = document.getElementById('xsw_autoplayId')
+      if (xsw_audio) {
+        xsw_audio.addEventListener('pause', function () {
+          if (xsw_audio.currentTime == 0) {
+            audioStatus = '2'
+          } else {
+            audioStatus = '0'
+          }
+        })
+        const panStatus = '0'
+        // console.log(audioStatus)
+        if (panStatus == audioStatus) {
+          callback(audioStatus)
+          clearInterval(zzz)
+        }
+      }
+    }, 1000)
+  }
+
+  getBackgroundAudioPlayerState(wx_object) {
+    const wx_success = wx_object.success
+    const wx_fail = wx_object.fail
+    const wx_complete = wx_object.complete
+    let wx_res
+    const xsw_audio = document.getElementById('xsw_autoplayId')
+    try {
+      if (xsw_audio) {
+        let audioStatus = '2'
+        xsw_audio.addEventListener('playing', function () {
+          audioStatus = '1'
+        })
+        xsw_audio.addEventListener('pause', function () {
+          audioStatus = '0'
+        })
+        setTimeout(function () {
+          const duration = xsw_audio.duration
+          const currentPosition = xsw_audio.currentTime
+          const status = audioStatus
+          const downloadPercent = parseInt((xsw_audio.buffered.end(0) / xsw_audio.duration) * 100)
+          const dataUrl = xsw_audio.src
+          wx_res = {
+            getBackgroundAudioPlayerState: 'ok',
+            duration: duration,
+            currentPosition: currentPosition,
+            status: status,
+            downloadPercent: downloadPercent,
+            dataUrl: dataUrl,
+          }
+          if (wx_success) {
+            wx_fail(wx_res)
+          }
+          if (wx_complete) {
+            wx_complete(wx_res)
+          }
+        }, 1000)
+      } else {
+        throw new Error('请先播放音乐！')
+      }
+    } catch (e) {
+      wx_res = {
+        errMsg: e.message,
+      }
+      if (wx_fail) {
+        wx_fail(wx_res)
+      }
+      if (wx_complete) {
+        wx_complete(wx_res)
+      }
+    }
+  }
+
+  getBackgroundAudioManager() {
+    const bgAudiocontext = new Audio()
+    bgAudiocontext.crossOrigin = 'anonymous'
+    if (this.fn_global().backgroundManager) {
+      return this.fn_global().backgroundManager
+    } else {
+      const backgroundManager = new BackgroundManager(bgAudiocontext)
+      this.fn_global().backgroundManager = backgroundManager
+      return backgroundManager
+    }
+  }
+
+  /** 实时音视频 */
   createLivePusherContext() {
     return new LivePusherContext()
   }
@@ -1416,73 +1706,68 @@ export default class WX {
   createLivePlayerContext(id, component) {
     return new LivePlayerContext(id, component)
   }
-  //////////////////// 视频  ///////////////////////
 
-  chooseVideo(options) {
-    const sourceType = options.sourceType || ['album', 'camara']
-    // const wx_compressed = wx_Object.compressed || true  // HTML5 is not support
-    // const wx_maxDuration = wx_object.maxDuration || 60  // HTML5 is not support
-    const camera = options.camera || 'back'
-    const success = options.success
-    const fail = options.fail
-    const complete = options.complete
-
-    options = null
-    PROMISE((SUCCESS) => {
-      const html_sourceType = sourceType
-      const html_sorts = 'vedio'
-      this._chooseMedia(SUCCESS, html_sourceType, html_sorts, camera)
-    }, success, fail, complete)
+  /** 录音 */
+  stopRecord(wx_object) {
+    const wx_success = wx_object.success
+    const wx_fail = wx_object.success
+    const wx_complete = wx_object.success
+    // ////////////////////////////
+    const wx_res = {}
+    // let localId
+    this.stopRecord({
+      success: function (res) {
+        if (wx_success) {
+          wx_res.errMsg = 'startRecord:ok'
+          wx_res.tempFilePath = res.localId // 小程序中会返回录音文件的临时存放路径 tempFilePath ，JS-SDK中会返回录音文件的 localId ，所以这里直接将 localId 赋值给 tempFilePath，让用户获取 tempFilePath 来播放录音。
+          wx_success(wx_res)
+        }
+      },
+      fail: function (wx_res) {
+        wx_fail(wx_res)
+      },
+      complete: function (wx_res) {
+        if (wx_complete) {
+          wx_complete(wx_res)
+        }
+      },
+    })
   }
 
-  saveVideoToPhotosAlbum(options) {
-
-    const filePath = options.filePath
-    const success = options.success
-    const fail = options.fail
-    const complete = options.complete
-
-    PROMISE((SUCCESS) => {
-      const xsw_A = document.createElement('a')
-      xsw_A.innerHTML = '<button>保存</button>'
-      xsw_A.setAttribute('id', 'xswAH')
-      xsw_A.setAttribute('download', 'download')
-      xsw_A.setAttribute('href', filePath)
-      xsw_A.setAttribute('target', "view-window")
-      xsw_A.click()
-      const res = {
-        errMsg: 'saveVideoToPhotosAlbum:ok'
-      }
-      SUCCESS(res)
-    }, success, fail, complete)
-  }
-
-  createVideoContext(id, component) {
-    const videoDom = document.getElementById(id)
-    if (this.fn_global().videoContext) {
-      return this.fn_global().videoContext
-    } else {
-      const videoContext = new VideoContext(videoDom)
-      this.fn_global().VideoContext = videoContext
-      return videoContext
+  startRecord() {
+    //  let wx_success = wx_object.success
+    // let wx_fail = wx_object.success
+    //  let wx_complete = wx_object.success
+    // ////////////////////////////
+    try {
+      this.startRecord()
+    } catch (error) {
+      const wx_res = {}
+      wx_res.errMsg = error.message
+      console.log(wx_res)
     }
   }
 
-  openVideoEditor() {}
-
-  ////////////////// 相机 //////////////////////////
-
-  createCameraContext() {
-    return new CameraContext()
+  getRecorderManager() {
+    navigator.getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia || navigator.msGetUserMedia
+    if (navigator.getUserMedia) {
+      if (this.fn_global().recorderManager) {
+        return this.fn_global().recorderManager;
+      } else {
+        const recorderManager = new RecorderManager()
+        this.fn_global().recorderManager = recorderManager
+        return recorderManager
+      }
+    }
+    throw 'getRecorderManager: Your browser version is too low!'
   }
 
-  ////////////////// 音视频合成  ///////////////////
+  /** 音视频合成 */
   createMediaContainer() {
     return new MediaContainer()
   }
 
-  ///////////////// 实时语音 //////////////////////
-
+  /** 实时语音 */
   updateVoIPChatMuteConfig() {}
 
   subscribeVoIPVideoMembers() {}
@@ -1503,10 +1788,18 @@ export default class WX {
 
   exitVoIPChat() {}
 
-  ////////////////////  画面录制器 //////////////////
+  /** 视频解码器 */
+  createVideoDecoder() {
+    return new VideoDecoder()
+  }
+
+  /** 画面录制器 */
   createMediaRecorder(canvas, options) {
     canvas = null
-    const { duration, videoBitsPerSecond } = options
+    const {
+      duration,
+      videoBitsPerSecond
+    } = options
 
     if (navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia) {
       navigator.mediaDevices.getDisplayMedia({
@@ -1525,20 +1818,143 @@ export default class WX {
 
         const mediaRecorder = new MediaRecorder(strema, options)
         new _MediaRecorder(mediaRecorder, duration, buf)
-        
+
       }).catch(err => {
         console.error(err)
       })
-    }else {
+    } else {
       console.error('your browser is not support meida-recoder')
     }
   }
 
-  ///////////////////// 视频解析 ////////////////////
-  createVideoDecoder() {
-    return new VideoDecoder()
+  ////////////////// 位置  ////////////////////
+  stopLocationUpdate() {}
+
+  startLocationUpdateBackground() {}
+
+  startLocationUpdate() {}
+
+  openLocation(wx_object) {
+    const latitude = wx_object.latitude // （必填） 纬度，浮点数，范围为90 ~ -90
+    const longitude = wx_object.longitude // （必填）经度，浮点数，范围为180 ~ -180
+    // TODO: 5~18 转换为 1~28
+    const scale = wx_object.latitude || 28 // 地图缩放级别,整形值,范围从1~28。默认为最大【小程序：缩放比例，范围5~18】
+    const name = wx_object.name // 位置名
+    const address = wx_object.address // 地址详情说明
+    const infoUrl = wx_object.infoUrl // * 在查看位置界面底部显示的超链接,可点击跳转
+    const wx_success = wx_object.success
+    const wx_fail = wx_object.fail
+    const wx_complete = wx_object.complete
+
+    try {
+      let errorInfo = ''
+      let hasError = false
+      const onekit_global = {}
+      if (typeof latitude !== 'number') {
+        errorInfo =
+          String.format(onekit_global.error_head, 'openLocation') +
+          String.format(onekit_global.error_body, 'latitude', 'Number', typeof longitude)
+        hasError = true
+      } else if (!longitude) {
+        // TODO: 无法进入这里判断
+        errorInfo += String.format(onekit_global.error_body, 'longitude', 'Number')
+        hasError = true
+      }
+      if (hasError) {
+        throw new Error(errorInfo)
+      }
+    } catch (error) {
+      console.error(error.message)
+    }
+
+    // INFO: success 会返回 res , fail 和 complete 不会返回
+    this.openLocation({
+      latitude: latitude,
+      longitude: longitude,
+      name: name,
+      address: address,
+      scale: scale,
+      infoUrl: infoUrl,
+      success: function (res) {
+        if (wx_success) {
+          wx_success(res)
+        }
+      },
+      fail: function () {
+        wx_fail()
+      },
+      complete: function () {
+        if (wx_complete) {
+          wx_complete()
+        }
+      },
+    })
   }
+
+  onLocationChange() {}
+
+  offLocationChange() {}
+
+  getLocation(options) {
+    // const type = options.type
+    const success = options.success
+    const fail = options.fail
+    const complete = options.complete
+
+    this._mapinit()
+    PROMISE(SUCCESS => {
+
+      window.addEventListener("load", () => {
+        const mapObj = new AMap.Map('iCenter')
+        mapObj.plugin('AMap.Geolocation', () => {
+          const geolocation = new AMap.Geolocation()
+          mapObj.addControl(geolocation)
+          geolocation.getCurrentPosition()
+          AMap.event.addListener(geolocation, 'complete', onComplete => {
+            const resu = {
+              accuracy: onComplete.accuracy,
+              altitude: onComplete.accuracy,
+              city: onComplete.addressComponent.city,
+              errMsg: 'getLocation: ok',
+              horizonralAccuracy: onComplete.accuracy,
+              latitude: onComplete.position.lat,
+              longitude: onComplete.position.lng,
+              speed: onComplete.status,
+              verticalAccuracy: onComplete.accuracy
+            }
+            SUCCESS(resu)
+
+          })
+          AMap.event.addListener(geolocation, 'error', onError)
+        })
+      })
+    }, success, fail, complete)
+  }
+
+  choosePoi() {}
+
+  chooseLocation() {}
+
+  ///////////////// 转发 ////////////////////////////
+  updateShareMenu() {}
+
+  showShareMenu() {}
+
+  showShareImageMenu() {}
+
+  onCopyUrl() {}
+
+  offCopyUrl() {}
+
+  hideShareMenu() {}
+
+  getShareInfo() {}
+
+  authPrivateMessage() {}
+
+
   ///////////////////// 文件  //////////////////////
+  saveFileToDisk() {}
 
   saveFile(options) {
     const tempFilePath = options.tempFilePath
@@ -1569,30 +1985,14 @@ export default class WX {
     }, success, fail, complete)
   }
 
-  getFileSystemManager() {
-    return new FileSystemManager(this.fn_global())
-  }
-
-  getFileInfo(options) {
+  removeSavedFile(options) {
     const filePath = options.filePath
     const success = options.success
     const fail = options.fail
     const complete = options.complete
     options = null
-    this.getFileSystemManager(this.fn_global()).getFileInfo({
+    this.getFileSystemManager(this.fn_global()).removeSavedFile({
       filePath,
-      success,
-      fail,
-      complete
-    })
-  }
-
-  getSavedFileList(options) {
-    const success = options.success
-    const fail = options.fail
-    const complete = options.complete
-    options = null
-    this.getFileSystemManager(this.fn_global()).getSavedFileList({
       success,
       fail,
       complete
@@ -1620,13 +2020,31 @@ export default class WX {
     }, success, fail, complete)
   }
 
-  removeSavedFile(options) {
+  getSavedFileList(options) {
+    const success = options.success
+    const fail = options.fail
+    const complete = options.complete
+    options = null
+    this.getFileSystemManager(this.fn_global()).getSavedFileList({
+      success,
+      fail,
+      complete
+    })
+  }
+
+  getSavedFileInfo() {}
+
+  getFileSystemManager() {
+    return new FileSystemManager(this.fn_global())
+  }
+
+  getFileInfo(options) {
     const filePath = options.filePath
     const success = options.success
     const fail = options.fail
     const complete = options.complete
     options = null
-    this.getFileSystemManager(this.fn_global()).removeSavedFile({
+    this.getFileSystemManager(this.fn_global()).getFileInfo({
       filePath,
       success,
       fail,
@@ -1634,6 +2052,98 @@ export default class WX {
     })
   }
 
+  //////////////////// 设备 ////////////////////
+  /** Wi-Fi */
+  stopWiFi() {}
+
+  startWiFi() {}
+
+  setWiFiList() {}
+
+  onWiFiConnected() {}
+
+  onGetWiFiList() {}
+
+  offWifiConnected() {}
+
+  getWiFiList() {}
+
+  getConnectedWifi(options) {
+    console.warn('h5 is not support getConnectedWifi')
+  }
+
+  connectWiFi() {}
+
+  /** NFC */
+  stopHCE() {}
+  startHCE() {}
+  sendHCEMessage() {}
+  onHCEMessage() {}
+  offHCEMessage() {}
+  getNFCAdapter() {
+    return new NFCAdapter()
+  }
+  getHCEState() {}
+
+  /** 日历 */
+  addPhoneRepeatCalendar() {}
+  addPhoneCalendar() {}
+
+  /** 联系人 */
+  chooseContact() {}
+  addPhoneContact() {}
+
+  /** 无障碍 */
+  checkIsOpenAccessibility() {}
+
+  /** 低功耗蓝牙 */
+  writeBLECharacteristicValue() {}
+
+  setBLEMTU() {}
+
+  readBLECharacteristicValue() {}
+
+  onBLEConnectionStateChange() {}
+
+  onBLECharacteristicValueChange() {}
+
+  offBLEConnectionStateChange() {}
+
+  offBLECharacteristicValueChange() {}
+
+  notifyBLECharacteristicValueChange() {}
+
+  makeBluetoothPair() {}
+
+  getBLEDeviceServices() {}
+
+  getBLEDeviceRSSI() {}
+
+  getBLEDeviceCharacteristics() {}
+
+  createBLEConnection() {}
+
+  closeBLEConnection() {}
+
+
+  /** 蓝牙 */
+  openBluetoothAdapter() {}
+
+  closeBluetoothAdapter() {}
+
+  getBluetoothAdapterState() {}
+
+  onBluetoothAdapterStateChange() {}
+
+  startBluetoothDevicesDiscovery() {}
+
+  stopBluetoothDevicesDiscovery() {}
+
+  getBluetoothDevices() {}
+
+  getConnectedBluetoothDevices() {}
+
+  onBluetoothDeviceFound() {}
   //////////////////// 地理位置 ////////////////////
 
   _mapinit() {
@@ -1821,9 +2331,7 @@ export default class WX {
     }, success, fail, complete)
   }
 
-  getConnectedWifi(options) {
-    console.warn('h5 is not support getConnectedWifi')
-  }
+
 
   onAccelerometerChange(callback) {
     this.accleration = function _eventListener(e) {
@@ -2138,415 +2646,20 @@ export default class WX {
     performance.onresourcetimingbufferful = _sourceful
   }
 
-  ////////////////// 位置  ////////////////////
-  stopLocationUpdate() {}
-
-  startLocationUpdateBackground() {}
-
-  startLocationUpdate() {}
-
-  openLocation(wx_object) {
-    const latitude = wx_object.latitude // （必填） 纬度，浮点数，范围为90 ~ -90
-    const longitude = wx_object.longitude // （必填）经度，浮点数，范围为180 ~ -180
-    // TODO: 5~18 转换为 1~28
-    const scale = wx_object.latitude || 28 // 地图缩放级别,整形值,范围从1~28。默认为最大【小程序：缩放比例，范围5~18】
-    const name = wx_object.name // 位置名
-    const address = wx_object.address // 地址详情说明
-    const infoUrl = wx_object.infoUrl // * 在查看位置界面底部显示的超链接,可点击跳转
-    const wx_success = wx_object.success
-    const wx_fail = wx_object.fail
-    const wx_complete = wx_object.complete
-
-    try {
-      let errorInfo = ''
-      let hasError = false
-      const onekit_global = {}
-      if (typeof latitude !== 'number') {
-        errorInfo =
-          String.format(onekit_global.error_head, 'openLocation') +
-          String.format(onekit_global.error_body, 'latitude', 'Number', typeof longitude)
-        hasError = true
-      } else if (!longitude) {
-        // TODO: 无法进入这里判断
-        errorInfo += String.format(onekit_global.error_body, 'longitude', 'Number')
-        hasError = true
-      }
-      if (hasError) {
-        throw new Error(errorInfo)
-      }
-    } catch (error) {
-      console.error(error.message)
-    }
-
-    // INFO: success 会返回 res , fail 和 complete 不会返回
-    this.openLocation({
-      latitude: latitude,
-      longitude: longitude,
-      name: name,
-      address: address,
-      scale: scale,
-      infoUrl: infoUrl,
-      success: function (res) {
-        if (wx_success) {
-          wx_success(res)
-        }
-      },
-      fail: function () {
-        wx_fail()
-      },
-      complete: function () {
-        if (wx_complete) {
-          wx_complete()
-        }
-      },
-    })
-  }
-
-  onLocationChange() {}
-
-  offLocationChange() {}
-
-  getLocation(options) {
-    // const type = options.type
-    const success = options.success
-    const fail = options.fail
-    const complete = options.complete
-
-    this._mapinit()
-    PROMISE(SUCCESS => {
-
-      window.addEventListener("load", () => {
-        const mapObj = new AMap.Map('iCenter')
-        mapObj.plugin('AMap.Geolocation', () => {
-          const geolocation = new AMap.Geolocation()
-          mapObj.addControl(geolocation)
-          geolocation.getCurrentPosition()
-          AMap.event.addListener(geolocation, 'complete', onComplete => {
-            const resu = {
-              accuracy: onComplete.accuracy,
-              altitude: onComplete.accuracy,
-              city: onComplete.addressComponent.city,
-              errMsg: 'getLocation: ok',
-              horizonralAccuracy: onComplete.accuracy,
-              latitude: onComplete.position.lat,
-              longitude: onComplete.position.lng,
-              speed: onComplete.status,
-              verticalAccuracy: onComplete.accuracy
-            }
-            SUCCESS(resu)
-
-          })
-          AMap.event.addListener(geolocation, 'error', onError)
-        })
-      })
-    }, success, fail, complete)
-  }
-
   /////////////////////////////////////////////////
-  setInnerAudioOption() {}
-  getAvailableAudioSources() {}
 
-
-  getBackgroundAudioPlayerState(wx_object) {
-    const wx_success = wx_object.success
-    const wx_fail = wx_object.fail
-    const wx_complete = wx_object.complete
-    let wx_res
-    const xsw_audio = document.getElementById('xsw_autoplayId')
-    try {
-      if (xsw_audio) {
-        let audioStatus = '2'
-        xsw_audio.addEventListener('playing', function () {
-          audioStatus = '1'
-        })
-        xsw_audio.addEventListener('pause', function () {
-          audioStatus = '0'
-        })
-        setTimeout(function () {
-          const duration = xsw_audio.duration
-          const currentPosition = xsw_audio.currentTime
-          const status = audioStatus
-          const downloadPercent = parseInt((xsw_audio.buffered.end(0) / xsw_audio.duration) * 100)
-          const dataUrl = xsw_audio.src
-          wx_res = {
-            getBackgroundAudioPlayerState: 'ok',
-            duration: duration,
-            currentPosition: currentPosition,
-            status: status,
-            downloadPercent: downloadPercent,
-            dataUrl: dataUrl,
-          }
-          if (wx_success) {
-            wx_fail(wx_res)
-          }
-          if (wx_complete) {
-            wx_complete(wx_res)
-          }
-        }, 1000)
-      } else {
-        throw new Error('请先播放音乐！')
-      }
-    } catch (e) {
-      wx_res = {
-        errMsg: e.message,
-      }
-      if (wx_fail) {
-        wx_fail(wx_res)
-      }
-      if (wx_complete) {
-        wx_complete(wx_res)
-      }
-    }
-  }
-
-  playBackgroundAudio(wx_object) {
-    const dataUrl = wx_object.dataUrl
-    const title = wx_object.title
-    const coverImgUrl = wx_object.coverImgUrl
-    const wx_success = wx_object.success
-    const wx_fail = wx_object.fail
-    const wx_complete = wx_object.complete
-    let wx_res
-    try {
-      let wrap
-      if (title || coverImgUrl) {
-        wrap = document.createElement('div')
-        wrap.innerHTML =
-          '<div style="width: 80%background-color: #444margin-left: 10%"><img src="' +
-          coverImgUrl +
-          '" style="width: 80pxheight: 80pxdisplay: inline-blockpadding-left: 20pxmargin-top: 10px"><div style="display: inline-blockpadding-left: 20pxcolor: #fff">' +
-          title +
-          '</div></div><audio src="" id="xsw_autoplayId"  style="width: 80%margin-left: 10%"   controls="controls"  ></audio>'
-        const firstT = document.body.firstChild
-        document.body.insertBefore(wrap, firstT)
-      } else {
-        wrap = document.createElement('audio')
-        wrap.setAttribute('id', 'xsw_autoplayId')
-        wrap.setAttribute('autoplay', 'autoplay')
-        wrap.setAttribute('style', 'visibility: hidden')
-        const first = document.body.firstChild
-        document.body.insertBefore(wrap, first)
-      }
-      const xsw_audio = document.getElementById('xsw_autoplayId')
-      xsw_audio.src = dataUrl
-      // xsw_audio.controls=true
-      xsw_audio.autoplay = true
-      wx_res = {
-        playBackgroundAudio: 'ok',
-      }
-      if (wx_success) {
-        wx_success(wx_res)
-      }
-      if (wx_complete) {
-        wx_complete(wx_res)
-      }
-    } catch (e) {
-      wx_res = {
-        errMsg: e.message,
-      }
-      if (wx_fail) {
-        wx_fail(wx_res)
-      }
-      if (wx_complete) {
-        wx_complete(wx_res)
-      }
-    }
-  }
-
-  pauseBackgroundAudio(wx_object) {
-    const xsw_audio = document.getElementById('xsw_autoplayId')
-    if (!wx_object) {
-      if (xsw_audio) {
-        xsw_audio.pause()
-      } else {
-        throw new Error('请先播放音乐！')
-      }
-    } else {
-      const wx_success = wx_object.success
-      const wx_fail = wx_object.fail
-      const wx_complete = wx_object.complete
-      let wx_res
-      try {
-        if (xsw_audio) {
-          xsw_audio.pause()
-          wx_res = {
-            pauseBackgroundAudio: 'ok',
-          }
-          if (wx_success) {
-            wx_success(wx_res)
-          }
-          if (wx_complete) {
-            wx_complete(wx_res)
-          }
-        } else {
-          throw new Error('请先播放音乐！')
-        }
-      } catch (e) {
-        wx_res = {
-          errMsg: e.message,
-        }
-        if (wx_fail) {
-          wx_fail(wx_res)
-        }
-        if (wx_complete) {
-          wx_complete(wx_res)
-        }
-      }
-    }
-  }
-
-  stopBackgroundAudio(wx_object) {
-    const xsw_audio = document.getElementById('xsw_autoplayId')
-    if (!wx_object) {
-      if (xsw_audio) {
-        xsw_audio.pause()
-        xsw_audio.currentTime = 0
-      } else {
-        throw new Error('请先播放音乐！')
-      }
-    } else {
-      const wx_success = wx_object.success
-      const wx_fail = wx_object.fail
-      const wx_complete = wx_object.complete
-      let wx_res
-      try {
-        if (xsw_audio) {
-          xsw_audio.pause()
-          wx_res = {
-            pauseBackgroundAudio: 'ok',
-          }
-          if (wx_success) {
-            wx_success(wx_res)
-          }
-          if (wx_complete) {
-            wx_complete(wx_res)
-          }
-        } else {
-          throw new Error('请先播放音乐！')
-        }
-      } catch (e) {
-        wx_res = {
-          errMsg: e.message,
-        }
-        if (wx_fail) {
-          wx_fail(wx_res)
-        }
-        if (wx_complete) {
-          wx_complete(wx_res)
-        }
-      }
-    }
-  }
-
-  seekBackgroundAudio(wx_object) {
-    const position = wx_object.position
-    const wx_success = wx_object.success
-    const wx_fail = wx_object.fail
-    const wx_complete = wx_object.complete
-    let wx_res
-    const xsw_audio = document.getElementById('xsw_autoplayId')
-    try {
-      if (xsw_audio) {
-        xsw_audio.currentTime = position
-        wx_res = {
-          seekBackgroundAudio: 'ok',
-        }
-        if (wx_success) {
-          wx_success(wx_res)
-        }
-        if (wx_complete) {
-          wx_complete(wx_res)
-        }
-      } else {
-        throw new Error('请先播放音乐！')
-      }
-    } catch (e) {
-      wx_res = {
-        errMsg: e.message,
-      }
-      if (wx_fail) {
-        wx_fail(wx_res)
-      }
-      if (wx_complete) {
-        wx_complete(wx_res)
-      }
-    }
-  }
-
-  onBackgroundAudioPlay(callback) {
-    setTimeout(function () {
-      const xsw_audio = document.getElementById('xsw_autoplayId')
-      if (xsw_audio) {
-        xsw_audio.addEventListener('playing', function () {
-          const audioStatus = '1'
-          callback(audioStatus)
-        })
-      }
-    })
-  }
-
-  onBackgroundAudioPause(callback) {
-    let audioStatus
-    const zzz = setInterval(function () {
-      const xsw_audio = document.getElementById('xsw_autoplayId')
-      if (xsw_audio) {
-        xsw_audio.addEventListener('pause', function () {
-          if (xsw_audio.currentTime == 0) {
-            audioStatus = '2'
-          } else {
-            audioStatus = '0'
-          }
-        })
-        const panStatus = '0'
-        // console.log(audioStatus)
-        if (panStatus == audioStatus) {
-          callback(audioStatus)
-          clearInterval(zzz)
-        }
-      }
-    }, 1000)
-  }
-
-  onBackgroundAudioStop(callback) {
-    let audioStatus
-    const zzz = setInterval(function () {
-      const xsw_audio = document.getElementById('xsw_autoplayId')
-      if (xsw_audio) {
-        xsw_audio.addEventListener('pause', function () {
-          if (xsw_audio.currentTime == 0) {
-            audioStatus = '2'
-          } else {
-            audioStatus = '0'
-          }
-        })
-        const panStatus = '2'
-        if (panStatus == audioStatus) {
-          callback(audioStatus)
-          clearInterval(zzz)
-        }
-      }
-    }, 1000)
-  }
   // BackgroundAudioManager
 
   // LivePusher
-
-
-
-  // CameraFrameListener
-
-  // EditorContext
 
   // share
 
   getSavedFileList() {}
 
-  getSavedFileInfo() {}
+
 
   removeSavedFile() {}
 
-
-  createCameraContext() {}
 
   login() {
     const weiXdeng = document.createElement('button')
@@ -2696,65 +2809,9 @@ export default class WX {
 
   onBeaconServiceChange() {}
 
-  getHCEState() {}
 
-  startHCE() {}
 
-  stopHCE() {}
-
-  onHCEMessage() {}
-
-  sendHCEMessage() {}
-
-  startWiFi() {}
-
-  stopWiFi() {}
-
-  connectWiFi() {}
-
-  getWiFiList() {}
-
-  onGetWiFiList() {}
-
-  setWiFiList() {}
-
-  onWiFiConnected() {}
-
-  openBluetoothAdapter() {}
-
-  closeBluetoothAdapter() {}
-
-  getBluetoothAdapterState() {}
-
-  onBluetoothAdapterStateChange() {}
-
-  startBluetoothDevicesDiscovery() {}
-
-  stopBluetoothDevicesDiscovery() {}
-
-  getBluetoothDevices() {}
-
-  getConnectedBluetoothDevices() {}
-
-  onBluetoothDeviceFound() {}
-
-  createBLEConnection() {}
-
-  closeBLEConnection() {}
-
-  getBLEDeviceServices() {}
-
-  getBLEDeviceCharacteristics() {}
-
-  readBLECharacteristicValue() {}
-
-  writeBLECharacteristicValue() {}
-
-  notifyBLECharacteristicValueChange() {}
-
-  onBLEConnectionStateChange() {}
-
-  onBLECharacteristicValueChange() {}
+  
 
   // TODO: 未改未测试
   // HACK: 应该不能通过web方式实现
@@ -3454,27 +3511,7 @@ export default class WX {
   UserInfo() {}
   getUserInfo() {}
 
-  ///////////////// 转发 ////////////////////////////
-  updateShareMenu() {}
 
-  showShareMenu() {}
-
-  showShareImageMenu() {}
-
-  onCopyUrl() {}
-
-  offCopyUrl() {}
-
-  hideShareMenu() {}
-
-  getShareInfo() {}
-
-  authPrivateMessage() {}
-
-
-  playVoice() {}
-  pauseVoice() {}
-  stopVoice() {}
 
   onKeyboardHeightChange() {
     console.warn('onKeyboardHeightChange are not currently supported')
