@@ -1889,6 +1889,20 @@ export default class WX {
   }
 
   ////////////////// 位置  ////////////////////
+  _mapinit() {
+    const map_sdk = `https://webapi.amap.com/maps?v=1.4.15&key=${config.map.key}`
+    const jsapi = document.createElement('script')
+    jsapi.src = map_sdk
+    document.head.appendChild(jsapi)
+    window.addEventListener('load', () => {
+      const map_ui = '//webapi.amap.com/ui/1.1/main.js?v=1.1.1'
+      const jsuiapi = document.createElement('script')
+      jsuiapi.src = map_ui
+      document.head.appendChild(jsuiapi)
+    })
+    // document.head.removeChild(jsapi)
+  }
+
   stopLocationUpdate() {}
 
   startLocationUpdateBackground() {}
@@ -1991,10 +2005,61 @@ export default class WX {
       })
     }, success, fail, complete)
   }
-
+  
   choosePoi() {}
 
-  chooseLocation() {}
+  // chooseLocation(options) {
+  //   const {latitude, longitude, success, fail, complete} = options
+  //   PROMISE(SUCCESS => {
+  //     this._mapinit()
+  //     const map_container = document.createElement('div')
+  //     map_container.setAttribute('style', 'height:100vh;width:100vw;')
+  //     map_container.setAttribute('id', 'onekitmap-container')
+  //     document.body.appendChild(map_container)
+  //     const map = new AMap.Map('onekitmap-container', {
+  //       resizeEnable: true,
+  //       zoom: 16,
+  //       center: [longitude, latitude]
+  //     })
+  //     const center_maker = new AMap.Marker({
+  //       position: map.getCenter(),
+  //       draggable: true,
+  //       cursor: 'move',
+  //       // 设置拖拽效果
+  //       raiseOnDrag: true
+  //     })
+
+  //     center_maker.setMap(map)
+  //     map.getCenter(res => {
+  //       console.log(res)
+  //     })
+  //     center_maker.on('dragend', res => {
+  //       const {lng, lat} = res.lnglat
+  //       map.setCenter([lng, lat])
+  //       // AMap.event.addListener(geolocation, 'complete', onComplete => {
+  //         const geoCoder = new AMap.geoCoder({
+  //           city: ''
+  //         })
+
+  //        geoCoder.getAddress([lng, lat], (status, result) => {
+  //          console.log(status, result)
+  //        })
+  //         const resu = {
+  //           errMsg: 'getLocation: ok',
+  //           latitude: onComplete.position.lat,
+  //           longitude: onComplete.position.lng,
+  //           address: '',
+  //           address
+  //         }
+  //         SUCCESS(resu)
+  //       // })
+  //     })
+  //     const res = {
+
+  //     }
+  //     SUCCESS(res)
+  //   }, success, fail, complete)
+  // }
 
   ///////////////// 转发 ////////////////////////////
   updateShareMenu() {}
@@ -2261,15 +2326,34 @@ export default class WX {
     })
   }
 
+  /** 生物认证 */
   checkIsSupportSoterAuthentication() {}
 
   startSoterAuthentication() {}
 
   checkIsSoterEnrolledInDevice() {}
 
+  /** 微信运动 */
+  shareToWeRun() {}
   getWeRunData() {}
 
+  /** 性能 */
+  reportPerformance(){}
+  getPerformance(){}
+
+  /** 订阅消息 */
+  requestSubscribeMessage() {}
+  showRedPackage() {}
+  getGroupEnterInfo() {}
+
+  //////////////////// 设备 ////////////////////
+  /** 外围设备 */
+  onBLEPeripheralConnectionStateChanged(){}
+  offBLEPeripheralConnectionStateChanged() {}
+  createBLEPeripheralServer() {}
+  /** iBeacon */
   // 小程序和 JS-SDK 都有 iBeacon 的实现，但是貌似不一样
+  stopBeaconDiscovery() {}
   startBeaconDiscovery() {
     // let uuids = wx_object.uuids
     // let ignoreBluetoothAvailable = wx_object.ignoreBluetoothAvailable
@@ -2284,16 +2368,15 @@ export default class WX {
     //   }
     // })
   }
-
-  stopBeaconDiscovery() {}
-
   getBeacons() {}
 
   onBeaconUpdate() {}
 
   onBeaconServiceChange() {}
 
-  //////////////////// 设备 ////////////////////
+  offBeaconUpdate() {}
+
+  offBeaconServiceChange() {}
   /** Wi-Fi */
   stopWiFi() {
     const errMsg = 'h5 is not support onGetWifiList'
@@ -2358,7 +2441,38 @@ export default class WX {
 
   /** 联系人 */
   chooseContact() {}
-  addPhoneContact() {}
+  addPhoneContact(wx_object) {
+    const phoneNumber = wx_object.phoneNumber
+    const wx_success = wx_object.success
+    const wx_fail = wx_object.fail
+    const wx_complete = wx_object.complete
+    let wx_res
+    try {
+      const oDiv = document.createElement('div')
+      oDiv.innerHTML = '<a  id=\'biaoDown\' href=\'#\' style=\'display: none\'></a>'
+      console.log(oDiv)
+      document.body.appendChild(oDiv)
+      const Url2 = document.getElementById('biaoDown')
+      Url2.setAttribute('href', 'wtai://wp/ap' + phoneNumber + '')
+      wx_res = {}
+      if (wx_success) {
+        wx_success(wx_res)
+      }
+      if (wx_complete) {
+        wx_complete(wx_res)
+      }
+    } catch (e) {
+      wx_res = {
+        errMsg: e.message,
+      }
+      if (wx_fail) {
+        wx_fail(wx_res)
+      }
+      if (wx_complete) {
+        wx_complete(wx_res)
+      }
+    }
+  }
 
   /** 无障碍 */
   checkIsOpenAccessibility() {}
@@ -3486,162 +3600,13 @@ export default class WX {
 
   createInterstitialAd() {}
 
-  //////////////////// 地理位置 ////////////////////
-
-  _mapinit() {
-    const map_sdk = `https://webapi.amap.com/maps?v=1.4.15&key=${config.map.key}`
-    const jsapi = document.createElement('script')
-    jsapi.src = map_sdk
-    document.head.appendChild(jsapi)
-    window.addEventListener('load', () => {
-      const map_ui = '//webapi.amap.com/ui/1.1/main.js?v=1.1.1'
-      const jsuiapi = document.createElement('script')
-      jsuiapi.src = map_ui
-      document.head.appendChild(jsuiapi)
-    })
-    // document.head.removeChild(jsapi)
-  }
-
-  // chooseLocation(options) {
-  //   const {latitude, longitude, success, fail, complete} = options
-  //   PROMISE(SUCCESS => {
-  //     this._mapinit()
-  //     const map_container = document.createElement('div')
-  //     map_container.setAttribute('style', 'height:100vh;width:100vw;')
-  //     map_container.setAttribute('id', 'onekitmap-container')
-  //     document.body.appendChild(map_container)
-  //     const map = new AMap.Map('onekitmap-container', {
-  //       resizeEnable: true,
-  //       zoom: 16,
-  //       center: [longitude, latitude]
-  //     })
-  //     const center_maker = new AMap.Marker({
-  //       position: map.getCenter(),
-  //       draggable: true,
-  //       cursor: 'move',
-  //       // 设置拖拽效果
-  //       raiseOnDrag: true
-  //     })
-
-  //     center_maker.setMap(map)
-  //     map.getCenter(res => {
-  //       console.log(res)
-  //     })
-  //     center_maker.on('dragend', res => {
-  //       const {lng, lat} = res.lnglat
-  //       map.setCenter([lng, lat])
-  //       // AMap.event.addListener(geolocation, 'complete', onComplete => {
-  //         const geoCoder = new AMap.geoCoder({
-  //           city: ''
-  //         })
-
-  //        geoCoder.getAddress([lng, lat], (status, result) => {
-  //          console.log(status, result)
-  //        })
-  //         const resu = {
-  //           errMsg: 'getLocation: ok',
-  //           latitude: onComplete.position.lat,
-  //           longitude: onComplete.position.lng,
-  //           address: '',
-  //           address
-  //         }
-  //         SUCCESS(resu)
-
-  //       // })
-  //     })
-  //     const res = {
-
-  //     }
-  //     SUCCESS(res)
-  //   }, success, fail, complete)
-  // }
-
-  // BackgroundAudioManager
-
-  // LivePusher
-
-  // share
-
-
-
-
-
-
-
-
-
   // TODO: 未改未测试
   // HACK: 应该不能通过web方式实现
-  addPhoneContact(wx_object) {
-    const phoneNumber = wx_object.phoneNumber
-    const wx_success = wx_object.success
-    const wx_fail = wx_object.fail
-    const wx_complete = wx_object.complete
-    let wx_res
-    try {
-      const oDiv = document.createElement('div')
-      oDiv.innerHTML = '<a  id=\'biaoDown\' href=\'#\' style=\'display: none\'></a>'
-      console.log(oDiv)
-      document.body.appendChild(oDiv)
-      const Url2 = document.getElementById('biaoDown')
-      Url2.setAttribute('href', 'wtai://wp/ap' + phoneNumber + '')
-      wx_res = {}
-      if (wx_success) {
-        wx_success(wx_res)
-      }
-      if (wx_complete) {
-        wx_complete(wx_res)
-      }
-    } catch (e) {
-      wx_res = {
-        errMsg: e.message,
-      }
-      if (wx_fail) {
-        wx_fail(wx_res)
-      }
-      if (wx_complete) {
-        wx_complete(wx_res)
-      }
-    }
-  }
-
-
-
-  captureScreen() {
-    html2canvas(document.body).then(function (canvas) {
-      // let ctx = cas.getContext('2d')
-      // canvas.width = 100, canvas.height = 100
-      const dataURL = canvas.toDataURL('image/png', 1)
-      if (this.fn_global().Screen_callback) {
-        const wx_res = {
-          image: dataURL,
-        }
-        this.fn_global().Screen_callback(wx_res)
-      }
-    })
-  }
-
-
-  scanItem() {}
 
 
 
   // TODO: 未测试
   // INFO: Network Information API 兼容性很差 (https://caniuse.com/#feat=netinfo) (https://developer.mozilla.org/zh-CN/docs/Web/API/Network_Information_API)
-
-  color() {} // canvas
-  ble() {}
-  fileSystem() {}
-  livePlayer() {}
-  livePusher() {}
-  mediaContainer() {}
-  accountInfo() {}
-  
-  chooseInvoiceTitle() {}
-  chooseInvoice() {}
-
-  UserInfo() {}
-
 
 
 
